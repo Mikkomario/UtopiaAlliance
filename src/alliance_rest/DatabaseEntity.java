@@ -18,6 +18,8 @@ import vault_database.DatabaseUnavailableException;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
 import nexus_http.InvalidParametersException;
+import nexus_http.MethodNotSupportedException;
+import nexus_http.MethodType;
 import nexus_http.NotFoundException;
 import nexus_rest.RestData;
 import nexus_rest.RestEntity;
@@ -36,6 +38,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	
 	private DatabaseTable table;
 	private String id, idColumnName;
+	private String path;
 	
 	
 	// CONSTRUCTOR	-------------------------
@@ -62,6 +65,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		// Loads some data from the database
 		Map<String, String> data = readData();
 		initialize(data, new HashMap<String, String>());
+		
+		this.path = parent.getPath() + "/" + getDatabaseID();
 	}
 	
 	/**
@@ -95,6 +100,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		
 		// Saves the entity into database
 		writeData();
+		
+		this.path = parent.getPath() + "/" + getDatabaseID();
 	}
 	
 	
@@ -116,10 +123,19 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	
 	@Override
 	public String getName()
-	{	
-		if (Character.isDigit(this.id.charAt(0)))
+	{
+		if (getDatabaseID() == null)
+			return "null";
+		if (Character.isDigit(getDatabaseID().charAt(0)))
 			return this.idColumnName + this.id;
 		return this.id;
+	}
+	
+	@Override
+	public RestEntity Post(Map<String, String> parameters) throws HttpException
+	{
+		// By default, databaseEntities don't have any entities below them
+		throw new MethodNotSupportedException(MethodType.POST);
 	}
 	
 	@Override
@@ -133,6 +149,12 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			writer.writeAttribute("id", this.id);
 	}
 	
+	@Override
+	public String getPath()
+	{
+		return this.path;
+	}
+	
 	
 	// GETTERS & SETTERS	------------------
 	
@@ -142,6 +164,14 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	public DatabaseTable getTable()
 	{
 		return this.table;
+	}
+	
+	/**
+	 * @return The id of this entity in the database
+	 */
+	public String getDatabaseID()
+	{
+		return this.id;
 	}
 	
 	
@@ -168,7 +198,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 				DatabaseAccessor.insert(getTable(), getColumnData());
 				if (getTable().usesIndexing())
 					DatabaseSettings.getTableHandler().informAboutNewRow(getTable(), 
-							Integer.parseInt(this.id));
+							Integer.parseInt(getDatabaseID()));
 			}
 		}
 		catch (DatabaseUnavailableException | SQLException e)
@@ -178,7 +208,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		}
 		catch (NumberFormatException e)
 		{
-			throw new InvalidParametersException("ID " + this.id + 
+			throw new InvalidParametersException("ID " + getDatabaseID() + 
 					" can't be parsed into an integer");
 		}
 	}
@@ -194,11 +224,12 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			// Parses the id, if necessary
 			int intID = 0;
 			if (getTable().usesIndexing())
-				intID = Integer.parseInt(this.id);
+				intID = Integer.parseInt(getDatabaseID());
 			
 			statement = accessor.getPreparedStatement("SELECT * FROM " + 
 					DatabaseSettings.getTableHandler().getTableNameForIndex(getTable(), 
-					intID, false) + " WHERE " + this.idColumnName + " = '" + this.id + "'");
+					intID, false) + " WHERE " + this.idColumnName + " = '" + getDatabaseID() 
+					+ "'");
 			results = statement.executeQuery();
 			
 			// Data was found
@@ -217,7 +248,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		}
 		catch (NumberFormatException e)
 		{
-			throw new InvalidParametersException("ID " + this.id + 
+			throw new InvalidParametersException("ID " + getDatabaseID() + 
 					" can't be parsed into an integer");
 		}
 		catch (SQLException | DatabaseUnavailableException e)
@@ -241,7 +272,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			String[] columnNames = 
 					getTable().getColumnNames().toArray(new String[0]);
 			String[] columnData = getColumnData().toArray(new String[0]);
-			DatabaseAccessor.update(getTable(), this.idColumnName, "'" + this.id + "'", 
+			DatabaseAccessor.update(getTable(), this.idColumnName, "'" + getDatabaseID() + "'", 
 					columnNames, columnData);
 		}
 		catch (DatabaseUnavailableException | SQLException e)
@@ -253,12 +284,12 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	
 	private boolean isInDatabase() throws InternalServerException
 	{
-		if (this.id == null)
+		if (getDatabaseID() == null)
 			return false;
 		try
 		{
-			return !DatabaseAccessor.findMatchingData(getTable(), this.idColumnName, this.id, 
-					this.idColumnName).isEmpty();
+			return !DatabaseAccessor.findMatchingData(getTable(), this.idColumnName, 
+					getDatabaseID(), this.idColumnName).isEmpty();
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{
