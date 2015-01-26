@@ -116,7 +116,9 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	
 	@Override
 	public String getName()
-	{
+	{	
+		if (Character.isDigit(this.id.charAt(0)))
+			return this.idColumnName + this.id;
 		return this.id;
 	}
 	
@@ -204,7 +206,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			{
 				data = new HashMap<>();
 				// Goes through the columns and collects the data
-				for (String field : DatabaseTable.readColumnNamesFromDatabase(getTable()))
+				for (String field : getTable().getColumnNames())
 				{
 					data.put(field, results.getString(field));
 				}
@@ -237,7 +239,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		try
 		{
 			String[] columnNames = 
-					DatabaseTable.readColumnNamesFromDatabase(getTable()).toArray(new String[0]);
+					getTable().getColumnNames().toArray(new String[0]);
 			String[] columnData = getColumnData().toArray(new String[0]);
 			DatabaseAccessor.update(getTable(), this.idColumnName, "'" + this.id + "'", 
 					columnNames, columnData);
@@ -271,29 +273,22 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		// Goes through all the required parameters (columns), if a data can't be found 
 		// from the given parameters, defaults are used. If it can't be found on either, 
 		// initialization fails
-		try
+		for (String field : getTable().getColumnNames())
 		{
-			for (String field : DatabaseTable.readColumnNamesFromDatabase(getTable()))
-			{
-				if (parameters.containsKey(field))
-					setAttribute(field, parameters.get(field));
-				else if (defaultParameters.containsKey(field))
-					setAttribute(field, defaultParameters.get(field));
-				else
-					throw new InvalidParametersException("Parameter " + field + " not provided");
-			}
-		}
-		catch (SQLException | DatabaseUnavailableException e)
-		{
-			throw new InternalServerException("Can't initialize the entity", e);
+			if (parameters.containsKey(field))
+				setAttribute(field, parameters.get(field));
+			else if (defaultParameters.containsKey(field))
+				setAttribute(field, defaultParameters.get(field));
+			else
+				throw new InvalidParametersException("Parameter " + field + " not provided");
 		}
 	}
 	
-	private List<String> getColumnData() throws DatabaseUnavailableException, SQLException
+	private List<String> getColumnData()
 	{
 		List<String> columnData = new ArrayList<>();
 		Map<String, String> attributes = getAttributes();
-		for (String columnName : DatabaseTable.readColumnNamesFromDatabase(getTable()))
+		for (String columnName : getTable().getColumnNames())
 		{
 			columnData.add(attributes.get(columnName));
 		}
