@@ -38,7 +38,7 @@ public class TestTableEntity extends DatabaseTableEntity
 	@Override
 	protected RestEntity loadEntityWithID(String id) throws HttpException
 	{
-		return new TestDatabaseEntity(this, id);
+		return new TestDatabaseEntity(getPath() + "/", id);
 	}
 
 	@Override

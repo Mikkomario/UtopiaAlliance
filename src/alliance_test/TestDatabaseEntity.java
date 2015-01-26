@@ -1,6 +1,5 @@
 package alliance_test;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,13 +25,13 @@ public class TestDatabaseEntity extends DatabaseEntity
 	
 	/**
 	 * Creates a new entity by loading its data from the database
-	 * @param parent The parent of the entity
+	 * @param rootPath The path preceding the entity, including the final '/'
 	 * @param id The identifier used for finding the entity
 	 * @throws HttpException If the entity couldn't be read
 	 */
-	public TestDatabaseEntity(RestEntity parent, String id) throws HttpException
+	public TestDatabaseEntity(String rootPath, String id) throws HttpException
 	{
-		super(new SimpleRestData(), parent, TestTable.DEFAULT, "id", id);
+		super(new SimpleRestData(), rootPath, TestTable.DEFAULT, "id", id);
 	}
 
 	/**
@@ -56,6 +55,8 @@ public class TestDatabaseEntity extends DatabaseEntity
 	{
 		// Checks the parameters but allows update
 		defaultPut(checkParameters(parameters));
+		// Also saves the changes
+		writeData();
 	}
 
 	@Override
@@ -66,17 +67,15 @@ public class TestDatabaseEntity extends DatabaseEntity
 	}
 	
 	@Override
-	protected List<RestEntity> getMissingEntities(Map<String, String> parameters)
+	protected Map<String, RestEntity> getMissingEntities(Map<String, String> parameters)
 			throws HttpException
 	{
 		// Has a link to the "friend"
-		List<RestEntity> links = new ArrayList<>();
+		Map<String, RestEntity> links = new HashMap<>();
 		
 		RestEntity friend = getFriend();
 		if (friend != null)
-			links.add(friend);
-		
-		// TODO: These are not shown as links but like children
+			links.put("friend", friend);
 		
 		return links;
 	}
@@ -122,14 +121,21 @@ public class TestDatabaseEntity extends DatabaseEntity
 		return parameters;
 	}
 	
-	private RestEntity getFriend() throws InternalServerException
+	private RestEntity getFriend() throws HttpException
 	{
 		if (!getAttributes().get("friendID").equals("-1"))
 		{
 			try
 			{
-				return new TestDatabaseEntity((RestEntity) getParent(), 
-						getAttributes().get("friendID"));
+				return new TestDatabaseEntity(getRootPath(), getAttributes().get("friendID"));
+			}
+			catch (NotFoundException e)
+			{
+				// If the entity has been deleted, forgets this previous friend
+				// TODO: The change takes places after the data has been written, which is 
+				// a bit problematic
+				setAttribute("friendID", "-1");
+				writeData();
 			}
 			catch (HttpException e)
 			{

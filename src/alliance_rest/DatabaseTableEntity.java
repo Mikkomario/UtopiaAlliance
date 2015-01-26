@@ -2,6 +2,7 @@ package alliance_rest;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -62,7 +63,7 @@ public abstract class DatabaseTableEntity extends RestEntity
 	// IMPLEMENTED METHODS	------------------------
 
 	@Override
-	protected List<RestEntity> getMissingEntities(Map<String, String> parameters) throws 
+	protected Map<String, RestEntity> getMissingEntities(Map<String, String> parameters) throws 
 			HttpException
 	{
 		// The parameters may cast restrictions on which entities are fetched
@@ -92,10 +93,11 @@ public abstract class DatabaseTableEntity extends RestEntity
 			throw new InternalServerException("Failed to read entity data", e);
 		}
 		
-		List<RestEntity> entities = new ArrayList<>();
+		Map<String, RestEntity> entities = new HashMap<>();
 		for (String id : entityIDs)
 		{
-			entities.add(loadEntityWithID(id));
+			RestEntity entity = loadEntityWithID(id);
+			entities.put(entity.getName(), entity);
 		}
 		
 		return entities;

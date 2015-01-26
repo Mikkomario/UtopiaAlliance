@@ -38,7 +38,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	
 	private DatabaseTable table;
 	private String id, idColumnName;
-	private String path;
 	
 	
 	// CONSTRUCTOR	-------------------------
@@ -46,16 +45,16 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	/**
 	 * Creates a new entity by reading its data from the database.
 	 * @param content The content of this entity
-	 * @param parent The parent of this entity
+	 * @param rootPath The path preceding the entity, including the last '/'
 	 * @param table The table that contains the entity's data
 	 * @param idColumnName The name of the column that contains the entity's identifier
 	 * @param id The entity's identifier with which it can be found from the database
 	 * @throws HttpException If the entity couldn't be read from the database
 	 */
-	public DatabaseEntity(RestData content, RestEntity parent, 
+	public DatabaseEntity(RestData content, String rootPath, 
 			DatabaseTable table, String idColumnName, String id) throws HttpException
 	{
-		super(id, content, parent);
+		super(id, content, rootPath);
 		
 		// Initializes attributes
 		this.table = table;
@@ -65,8 +64,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		// Loads some data from the database
 		Map<String, String> data = readData();
 		initialize(data, new HashMap<String, String>());
-		
-		this.path = parent.getPath() + "/" + getDatabaseID();
 	}
 	
 	/**
@@ -100,8 +97,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		
 		// Saves the entity into database
 		writeData();
-		
-		this.path = parent.getPath() + "/" + getDatabaseID();
 	}
 	
 	
@@ -152,7 +147,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	@Override
 	public String getPath()
 	{
-		return this.path;
+		return getRootPath() + getDatabaseID();
 	}
 	
 	
@@ -272,7 +267,14 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			String[] columnNames = 
 					getTable().getColumnNames().toArray(new String[0]);
 			String[] columnData = getColumnData().toArray(new String[0]);
-			DatabaseAccessor.update(getTable(), this.idColumnName, "'" + getDatabaseID() + "'", 
+			
+			System.out.println("Updates");
+			for (int i = 0; i < columnNames.length; i++)
+			{
+				System.out.println(columnNames[i] + " = " + columnData[i]);
+			}
+			
+			DatabaseAccessor.update(getTable(), this.idColumnName, getDatabaseID(), 
 					columnNames, columnData);
 		}
 		catch (DatabaseUnavailableException | SQLException e)
