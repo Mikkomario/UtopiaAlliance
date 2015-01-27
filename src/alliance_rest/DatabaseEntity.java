@@ -72,8 +72,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @param content The content of this entity
 	 * @param parent The parent of this entity
 	 * @param table The table that contains the entity's data
-	 * @param id The entity's unique identifier. If the table uses auto-increment indexing, 
-	 * this should be left as null.
 	 * @param idColumnName The name of the column that will hold the entity's identifier
 	 * @param parameters The parameters used for creating this entity. These parameters should 
 	 * be checked beforehand in case they can't be parsed or are otherwise invalid.
@@ -82,18 +80,18 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @throws HttpException If the entity couldn't be initialized or written
 	 */
 	public DatabaseEntity(RestData content, RestEntity parent, 
-			DatabaseTable table, String id, String idColumnName, 
-			Map<String, String> parameters, Map<String, String> defaultParameters) 
-			throws HttpException
+			DatabaseTable table, String idColumnName, Map<String, String> parameters, 
+			Map<String, String> defaultParameters) throws HttpException
 	{
-		super(id, content, parent);
+		super("unknown", content, parent);
 		
 		// Initializes attributes
 		this.table = table;
-		this.id = id;
 		this.idColumnName = idColumnName;
 		
 		initialize(parameters, defaultParameters);
+		
+		this.id = getAttributes().get(idColumnName);
 		
 		// Saves the entity into database
 		writeData();

@@ -121,4 +121,12 @@ public abstract class DatabaseTableEntity extends RestEntity
 	{
 		return this.table;
 	}
+	
+	/**
+	 * @return The name of the column that holds entity identifiers
+	 */
+	protected String getIDColumnName()
+	{
+		return this.idColumnName;
+	}
 }

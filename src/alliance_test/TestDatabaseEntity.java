@@ -43,7 +43,7 @@ public class TestDatabaseEntity extends DatabaseEntity
 	public TestDatabaseEntity(RestEntity parent, Map<String, String> parameters) 
 			throws HttpException
 	{
-		super(new SimpleRestData(), parent, TestTable.DEFAULT, null, "id", 
+		super(new SimpleRestData(), parent, TestTable.DEFAULT, "id", 
 				checkParameters(parameters), getDefaultParameters());
 	}
 	
