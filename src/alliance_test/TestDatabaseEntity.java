@@ -12,6 +12,7 @@ import nexus_rest.RestEntity;
 import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
 import nexus_rest.SimpleRestEntityList;
+import alliance_authorization.LoginKey;
 import alliance_rest.DatabaseEntity;
 
 /**
@@ -31,7 +32,7 @@ public class TestDatabaseEntity extends DatabaseEntity
 	 */
 	public TestDatabaseEntity(String rootPath, String id) throws HttpException
 	{
-		super(new SimpleRestData(), rootPath, TestTable.DEFAULT, "id", id);
+		super(new SimpleRestData(), rootPath, TestTable.ENTITY, "id", id);
 	}
 
 	/**
@@ -43,7 +44,7 @@ public class TestDatabaseEntity extends DatabaseEntity
 	public TestDatabaseEntity(RestEntity parent, Map<String, String> parameters) 
 			throws HttpException
 	{
-		super(new SimpleRestData(), parent, TestTable.DEFAULT, "id", 
+		super(new SimpleRestData(), parent, TestTable.ENTITY, "id", 
 				checkParameters(parameters), getDefaultParameters());
 	}
 	
@@ -53,8 +54,11 @@ public class TestDatabaseEntity extends DatabaseEntity
 	@Override
 	public void Put(Map<String, String> parameters) throws HttpException
 	{
+		LoginKey.checkKey(parameters);
+		
 		// Checks the parameters but allows update
 		defaultPut(checkParameters(parameters));
+		
 		// Also saves the changes
 		writeData();
 	}
@@ -77,6 +81,8 @@ public class TestDatabaseEntity extends DatabaseEntity
 		if (friend != null)
 			links.put("friend", friend);
 		
+		links.put("secure", getSecure());
+		
 		return links;
 	}
 
@@ -88,9 +94,19 @@ public class TestDatabaseEntity extends DatabaseEntity
 		if (path.equals(getAttributes().get("friendID")))
 			return getFriend();
 		
+		if (path.equals("secure"))
+			return getSecure();
+		
 		throw new NotFoundException(getPath() + "/" + path);
 	}
 
+	@Override
+	protected void prepareDelete(Map<String, String> parameters) throws HttpException
+	{
+		// Also deletes the secure
+		getSecure().delete(parameters);
+		super.prepareDelete(parameters);
+	}
 	
 	// OTHER METHODS	--------------------------------
 	
@@ -104,6 +120,10 @@ public class TestDatabaseEntity extends DatabaseEntity
 	private static Map<String, String> checkParameters(Map<String, String> parameters) 
 			throws HttpException
 	{
+		// Password must be provided
+		if (!parameters.containsKey("password"))
+			throw new InvalidParametersException("Parameter 'password' must be provided");
+		
 		// FriendID must point to an existing testEntity or be -1
 		if (parameters.containsKey("friendID") && !parameters.get("friendID").equals("-1"))
 		{
@@ -144,5 +164,10 @@ public class TestDatabaseEntity extends DatabaseEntity
 		}
 		
 		return null;
+	}
+	
+	private TestSecureEntity getSecure() throws HttpException
+	{
+		return new TestSecureEntity(getPath() + "/", getDatabaseID());
 	}
 }

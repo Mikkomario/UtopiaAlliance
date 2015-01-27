@@ -1,7 +1,9 @@
 package alliance_test;
 
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
@@ -17,13 +19,17 @@ public enum TestTable implements DatabaseTable
 	// id (auto-increment) | name | friendID
 	
 	/**
-	 * The only test table at this point
+	 * This table holds the basic entity data
 	 */
-	DEFAULT;
+	ENTITY,
+	/**
+	 * This table holds the entity's password data
+	 */
+	SECURE;
 	
 	// ATTRIBUTES	---------------------------
 	
-	private static List<String> columnNames = null;
+	private static Map<DatabaseTable, List<String>> columnNames = null;
 	
 	
 	// IMPLEMENTED METHODS	-------------------
@@ -34,7 +40,10 @@ public enum TestTable implements DatabaseTable
 		try
 		{
 			if (columnNames == null)
-				columnNames = DatabaseTable.readColumnNamesFromDatabase(this);
+				columnNames = new HashMap<>();
+			
+			if (!columnNames.containsKey(this))
+				columnNames.put(this, DatabaseTable.readColumnNamesFromDatabase(this));
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{
@@ -42,7 +51,7 @@ public enum TestTable implements DatabaseTable
 			e.printStackTrace();
 		}
 		
-		return columnNames;
+		return columnNames.get(this);
 	}
 
 	@Override
@@ -54,13 +63,25 @@ public enum TestTable implements DatabaseTable
 	@Override
 	public String getTableName()
 	{
-		return "test";
+		switch (this)
+		{
+			case ENTITY: return "entities";
+			case SECURE: return "secure";
+		}
+		
+		return null;
 	}
 
 	@Override
 	public boolean usesAutoIncrementIndexing()
 	{
-		return true;
+		switch (this)
+		{
+			case ENTITY: return true;
+			case SECURE: return false;
+		}
+		
+		return false;
 	}
 
 	@Override

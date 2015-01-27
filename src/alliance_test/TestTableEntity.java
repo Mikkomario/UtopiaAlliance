@@ -29,7 +29,7 @@ public class TestTableEntity extends DatabaseTableEntity
 	 */
 	public TestTableEntity(String name, RestEntity parent)
 	{
-		super(name, new SimpleRestData(), parent, TestTable.DEFAULT, "id");
+		super(name, new SimpleRestData(), parent, TestTable.ENTITY, "id");
 	}
 	
 	

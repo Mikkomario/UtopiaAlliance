@@ -2,6 +2,8 @@ package alliance_test;
 
 import java.sql.SQLException;
 
+import alliance_authorization.LoginManagerEntity;
+import alliance_authorization.PasswordChecker;
 import nexus_rest.RestEntity;
 import nexus_rest.StaticRestServer;
 import nexus_test.TestRestEntity;
@@ -51,8 +53,8 @@ public class AllianceTestServer
 		// Initializes database settings
 		try
 		{
-			DatabaseSettings.initialize(connectionTarget, user, args[2], TestTable.values(), 
-					100, "alliance_db", "tableamounts");
+			DatabaseSettings.initialize(connectionTarget, user, args[2], 100, "alliance_db", 
+					"tableamounts");
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{
@@ -64,6 +66,8 @@ public class AllianceTestServer
 		// Creates the server entities
 		RestEntity root = new TestRestEntity("root", null);
 		new TestTableEntity("entities", root);
+		new LoginManagerEntity("login", root, new PasswordChecker(TestTable.SECURE, 
+				"passwordHash", "id"));
 		
 		// Starts the server
 		StaticRestServer.setRootEntity(root);

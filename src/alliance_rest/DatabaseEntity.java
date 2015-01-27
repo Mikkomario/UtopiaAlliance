@@ -15,6 +15,7 @@ import vault_database.DatabaseAccessor;
 import vault_database.DatabaseSettings;
 import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
+import vault_database.InvalidTableTypeException;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
 import nexus_http.InvalidParametersException;
@@ -188,13 +189,16 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 						this.idColumnName);
 			else
 			{
-				DatabaseAccessor.insert(getTable(), getColumnData());
-				if (getTable().usesIndexing())
-					DatabaseSettings.getTableHandler().informAboutNewRow(getTable(), 
+				if (!getTable().usesIndexing())
+					DatabaseAccessor.insert(getTable(), getColumnData());
+				else if (getTable().usesAutoIncrementIndexing())
+					DatabaseAccessor.insert(getTable(), getColumnData(), this.idColumnName);
+				else
+					DatabaseAccessor.insert(getTable(), getColumnData(), 
 							Integer.parseInt(getDatabaseID()));
 			}
 		}
-		catch (DatabaseUnavailableException | SQLException e)
+		catch (DatabaseUnavailableException | SQLException | InvalidTableTypeException e)
 		{
 			throw new InternalServerException("Can't write " + getPath() + 
 					" into the database", e);
