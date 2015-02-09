@@ -1,15 +1,12 @@
 package alliance_test;
 
-import java.util.List;
 import java.util.Map;
 
 import nexus_http.HttpException;
 import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
 import nexus_rest.RestEntity;
-import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
-import nexus_rest.SimpleRestEntityList;
 import alliance_rest.DatabaseTableEntity;
 
 /**
@@ -60,12 +57,5 @@ public class TestTableEntity extends DatabaseTableEntity
 	{
 		// Can't be deleted
 		throw new MethodNotSupportedException(MethodType.DELETE);
-	}
-
-	@Override
-	protected RestEntityList wrapIntoList(String name, RestEntity parent,
-			List<RestEntity> entities)
-	{
-		return new SimpleRestEntityList(name, parent, entities);
 	}
 }

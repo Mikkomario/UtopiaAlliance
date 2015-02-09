@@ -68,15 +68,16 @@ public class LoginKey extends DatabaseEntity
 	 * @param parent The parent entity of this key
 	 * @param table The table that holds the key data
 	 * @param userIDColumnName The name of the column that holds the user identifier
+	 * @param userID The unique identifier of the user of this key
 	 * @param parameters The parameters provided by the client
 	 * @param keyColumnName The name of the column that holds the key data
 	 * @throws HttpException If the key couldn't be created based on the given data
 	 */
 	public LoginKey(RestEntity parent, DatabaseTable table,
-			String userIDColumnName, Map<String, String> parameters, 
+			String userIDColumnName, String userID, Map<String, String> parameters, 
 			String keyColumnName) throws HttpException
 	{
-		super(new SimpleRestData(), parent, table, userIDColumnName, 
+		super(new SimpleRestData(), parent, table, userIDColumnName, userID, 
 				modifyConstructionParameters(parameters, keyColumnName), new HashMap<>());
 	}
 	
@@ -85,14 +86,16 @@ public class LoginKey extends DatabaseEntity
 	 * automatically. LoginKeyTable.Default is used for storing the keys. You must take this 
 	 * into account.
 	 * @param parent The parent entity of this key
+	 * @param userID The unique identifier of the user of this key
 	 * @param parameters The parameters provided by the client
 	 * @throws HttpException If the key couldn't be created based on the given data
 	 * @see LoginKeyTable
 	 */
-	public LoginKey(RestEntity parent, Map<String, String> parameters) throws HttpException
+	public LoginKey(RestEntity parent, String userID, Map<String, String> parameters) 
+			throws HttpException
 	{
 		super(new SimpleRestData(), parent, LoginKeyTable.DEFAULT, 
-				LoginKeyTable.getUserIDColumnName(), 
+				LoginKeyTable.getUserIDColumnName(), userID, 
 				modifyConstructionParameters(parameters, LoginKeyTable.getKeyColumnName()), 
 				new HashMap<>());
 	}
@@ -144,6 +147,9 @@ public class LoginKey extends DatabaseEntity
 	public static void checkKey(DatabaseTable keyTable, String userIDColumnName, 
 			String userID, String keyColumnName, String key) throws HttpException
 	{
+		if (userID == null || key == null)
+			throw new AuthorizationException("Invalid login key");
+		
 		// Checks if there is a matching key in the database
 		String[] keyColumns = {userIDColumnName, keyColumnName};
 		String[] keyValues = {userID, key};
@@ -151,7 +157,7 @@ public class LoginKey extends DatabaseEntity
 		try
 		{
 			List<String> matchingIDs = DatabaseAccessor.findMatchingData(keyTable, keyColumns, 
-					keyValues, userID);
+					keyValues, userIDColumnName);
 			if (matchingIDs.isEmpty())
 				throw new AuthorizationException("Invalid login key");
 		}
@@ -179,20 +185,21 @@ public class LoginKey extends DatabaseEntity
 	 * Checks if the given login key is correct
 	 * @param keyTable The table that holds login key data
 	 * @param userIDColumnName The name of the column that holds user identifiers
+	 * @param userID The unique identifier of the user the key is for
 	 * @param keyColumnName The name of the column that holds the keys
 	 * @param parameters The parameters provided by the client
 	 * @throws HttpException Throws an authorization exception if the key was not acceptable
 	 */
 	public static void checkKey(DatabaseTable keyTable, String userIDColumnName, 
-			String keyColumnName, Map<String, String> parameters) throws HttpException
+			String userID, String keyColumnName, Map<String, String> parameters) 
+			throws HttpException
 	{
 		// Checks that the correct parameters exist
-		String userID = parameters.get(userIDColumnName);
 		String key = parameters.get(keyColumnName);
 		
 		if (userID == null || key == null)
 		{
-			throw new InvalidParametersException("Parameters " + userIDColumnName + " and " + 
+			throw new InvalidParametersException("Parameter " + 
 					keyColumnName + " required");
 		}
 		
@@ -203,13 +210,14 @@ public class LoginKey extends DatabaseEntity
 	/**
 	 * Checks if the given login key is correct. LoginKeyTable is used in this method. You 
 	 * should take this into account.
+	 * @param userID The unique identifier of the user the key is for
 	 * @param parameters The parameters provided by the client
 	 * @throws HttpException Throws an authorization exception if the key was not acceptable
 	 * @see LoginKeyTable
 	 */
-	public static void checkKey(Map<String, String> parameters) throws HttpException
+	public static void checkKey(String userID, Map<String, String> parameters) throws HttpException
 	{
-		checkKey(LoginKeyTable.DEFAULT, LoginKeyTable.getUserIDColumnName(), 
+		checkKey(LoginKeyTable.DEFAULT, LoginKeyTable.getUserIDColumnName(), userID, 
 				LoginKeyTable.getKeyColumnName(), parameters);
 	}
 	

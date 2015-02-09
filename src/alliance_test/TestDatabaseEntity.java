@@ -1,7 +1,6 @@
 package alliance_test;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import nexus_http.HttpException;
@@ -9,9 +8,7 @@ import nexus_http.InternalServerException;
 import nexus_http.InvalidParametersException;
 import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
-import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
-import nexus_rest.SimpleRestEntityList;
 import alliance_authorization.LoginKey;
 import alliance_rest.DatabaseEntity;
 
@@ -46,6 +43,9 @@ public class TestDatabaseEntity extends DatabaseEntity
 	{
 		super(new SimpleRestData(), parent, TestTable.ENTITY, "id", 
 				checkParameters(parameters), getDefaultParameters());
+		
+		// Also creates the secure
+		new TestSecureEntity(this, getDatabaseID(), parameters);
 	}
 	
 	
@@ -54,20 +54,13 @@ public class TestDatabaseEntity extends DatabaseEntity
 	@Override
 	public void Put(Map<String, String> parameters) throws HttpException
 	{
-		LoginKey.checkKey(parameters);
+		LoginKey.checkKey(getDatabaseID(), parameters);
 		
 		// Checks the parameters but allows update
 		defaultPut(checkParameters(parameters));
 		
 		// Also saves the changes
 		writeData();
-	}
-
-	@Override
-	protected RestEntityList wrapIntoList(String name, RestEntity parent,
-			List<RestEntity> entities)
-	{
-		return new SimpleRestEntityList(name, parent, entities);
 	}
 	
 	@Override

@@ -17,7 +17,7 @@ public enum LoginKeyTable implements DatabaseTable
 {
 	/**
 	 * The default (and only) login key table. Should contain the following columns: 'userID' 
-	 * and 'key'
+	 * and 'userKey'
 	 */
 	DEFAULT;
 	
@@ -58,7 +58,7 @@ public enum LoginKeyTable implements DatabaseTable
 	@Override
 	public String getTableName()
 	{
-		return "keys";
+		return "loginKeys";
 	}
 
 	@Override
@@ -89,6 +89,6 @@ public enum LoginKeyTable implements DatabaseTable
 	 */
 	public static String getKeyColumnName()
 	{
-		return "key";
+		return "userKey";
 	}
 }

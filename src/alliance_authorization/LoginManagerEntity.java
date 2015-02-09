@@ -4,10 +4,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import nexus_http.AuthorizationException;
 import nexus_http.HttpException;
 import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
+import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
 import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
@@ -114,15 +114,26 @@ public class LoginManagerEntity extends DatabaseTableEntity
 		// Checks that the provided password (or a key) is correct
 		try
 		{
+			LoginKey.checkKey(getTable(), getIDColumnName(), pathPart, this.keyColumnName, 
+					parameters.get(this.keyColumnName));
+		}
+		catch (HttpException e)
+		{
 			if (this.passwordChecker != null)
 				this.passwordChecker.checkPassword(pathPart, parameters);
 		}
-		catch (AuthorizationException e)
-		{
-			LoginKey.checkKey(getTable(), getIDColumnName(), this.keyColumnName, parameters);
-		}
 		
-		return super.getMissingEntity(pathPart, parameters);
+		// Tries to find an existing key
+		try
+		{
+			return super.getMissingEntity(pathPart, parameters);
+		}
+		catch (NotFoundException e)
+		{
+			// If there wasn't a key already, creates a new key
+			return new LoginKey(this, getTable(), getIDColumnName(), pathPart, parameters, 
+					this.keyColumnName);
+		}
 	}
 	
 	@Override

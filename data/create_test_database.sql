@@ -13,7 +13,13 @@ CREATE TABLE entities1
 CREATE TABLE secure1
 (
 	id 			bigint 			NOT NULL PRIMARY KEY,
-	passwordHash varchar(64) 	NOT NULL
+	passwordHash varchar(255) 	NOT NULL
+);
+
+CREATE TABLE loginKeys1
+(
+	userID 		bigint 			NOT NULL PRIMARY KEY,
+	userKey 	varchar(64) 	NOT NULL
 );
 
 CREATE TABLE tableamounts

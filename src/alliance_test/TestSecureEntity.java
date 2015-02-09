@@ -3,7 +3,6 @@ package alliance_test;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.xml.stream.XMLStreamWriter;
@@ -15,9 +14,7 @@ import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
 import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
-import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
-import nexus_rest.SimpleRestEntityList;
 import alliance_authorization.LoginKey;
 import alliance_authorization.PasswordHash;
 import alliance_rest.DatabaseEntity;
@@ -46,13 +43,14 @@ public class TestSecureEntity extends DatabaseEntity
 	/**
 	 * Creates a new secure
 	 * @param parent The parent of this entity
+	 * @param userID The identifier of the user this secure entity is for
 	 * @param parameters The parameters provided by the client
 	 * @throws HttpException If the entity couldn't be created
 	 */
-	public TestSecureEntity(RestEntity parent, Map<String, String> parameters) throws 
-			HttpException
+	public TestSecureEntity(DatabaseEntity parent, String userID, 
+			Map<String, String> parameters) throws HttpException
 	{
-		super(new SimpleRestData(), parent, TestTable.SECURE, "id", 
+		super(new SimpleRestData(), parent, TestTable.SECURE, "id", userID, 
 				modifyParameters(parameters), new HashMap<>());
 	}
 
@@ -63,7 +61,7 @@ public class TestSecureEntity extends DatabaseEntity
 	public void Put(Map<String, String> parameters) throws HttpException
 	{
 		// Requires authorization
-		LoginKey.checkKey(parameters);
+		LoginKey.checkKey(getDatabaseID(), parameters);
 		
 		// Also, has to hash the new password
 		if (parameters.containsKey("password"))
@@ -95,13 +93,6 @@ public class TestSecureEntity extends DatabaseEntity
 	{
 		throw new NotFoundException(getPath() + "/" + pathPart);
 	}
-
-	@Override
-	protected RestEntityList wrapIntoList(String name, RestEntity parent,
-			List<RestEntity> entities)
-	{
-		return new SimpleRestEntityList(name, parent, entities);
-	}
 	
 	@Override
 	public void writeContent(String serverLink, XMLStreamWriter writer) throws 
@@ -109,6 +100,18 @@ public class TestSecureEntity extends DatabaseEntity
 	{
 		// Secure entities cannot be written
 		throw new MethodNotSupportedException(MethodType.GET);
+	}
+	
+	@Override
+	public String getName()
+	{
+		return "secure";
+	}
+	
+	@Override
+	public String getPath()
+	{
+		return getRootPath() + getName();
 	}
 
 	
