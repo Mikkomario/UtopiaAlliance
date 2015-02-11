@@ -321,7 +321,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		try
 		{
 			return !DatabaseAccessor.findMatchingData(getTable(), this.idColumnName, 
-					getDatabaseID(), this.idColumnName).isEmpty();
+					getDatabaseID(), this.idColumnName, 1).isEmpty();
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{

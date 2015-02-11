@@ -157,7 +157,7 @@ public class LoginKey extends DatabaseEntity
 		try
 		{
 			List<String> matchingIDs = DatabaseAccessor.findMatchingData(keyTable, keyColumns, 
-					keyValues, userIDColumnName);
+					keyValues, userIDColumnName, 1);
 			if (matchingIDs.isEmpty())
 				throw new AuthorizationException("Invalid login key");
 		}
