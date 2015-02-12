@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import alliance_rest.DatabaseEntityTable;
 import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
 
@@ -13,7 +14,7 @@ import vault_database.DatabaseUnavailableException;
  * @author Mikko Hilpinen
  * @since 27.1.2015
  */
-public enum LoginKeyTable implements DatabaseTable
+public enum LoginKeyTable implements DatabaseEntityTable
 {
 	/**
 	 * The default (and only) login key table. Should contain the following columns: 'userID' 
@@ -71,6 +72,12 @@ public enum LoginKeyTable implements DatabaseTable
 	public boolean usesIndexing()
 	{
 		return false;
+	}
+	
+	@Override
+	public String getIDColumnName()
+	{
+		return "userID";
 	}
 	
 	

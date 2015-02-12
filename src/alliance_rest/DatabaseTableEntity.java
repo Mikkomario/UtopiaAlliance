@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import vault_database.DatabaseAccessor;
-import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
@@ -24,8 +23,7 @@ public abstract class DatabaseTableEntity extends RestEntity
 {
 	// ATTRIBUTES	-------------------------------
 	
-	private DatabaseTable table;
-	private String idColumnName;
+	private DatabaseEntityTable table;
 	
 	
 	// CONSTRUCTOR	-------------------------------
@@ -36,16 +34,14 @@ public abstract class DatabaseTableEntity extends RestEntity
 	 * @param content The contents of the entity
 	 * @param parent The parent of this entity
 	 * @param table The table that holds the entities under this one
-	 * @param idColumName The name of the column that identifies each entity in the table
 	 */
 	public DatabaseTableEntity(String name, RestData content, RestEntity parent, 
-			DatabaseTable table, String idColumName)
+			DatabaseEntityTable table)
 	{
 		super(name, content, parent);
 		
 		// Initializes attributes
 		this.table = table;
-		this.idColumnName = idColumName;
 	}
 	
 	
@@ -86,7 +82,7 @@ public abstract class DatabaseTableEntity extends RestEntity
 		{
 			entityIDs = DatabaseAccessor.findMatchingData(getTable(), 
 					restrictionColumns.toArray(new String[0]), 
-					restrictionValues.toArray(new String[0]), this.idColumnName);
+					restrictionValues.toArray(new String[0]), getTable().getIDColumnName());
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{
@@ -117,16 +113,8 @@ public abstract class DatabaseTableEntity extends RestEntity
 	/**
 	 * @return The table this entity uses
 	 */
-	protected DatabaseTable getTable()
+	protected DatabaseEntityTable getTable()
 	{
 		return this.table;
-	}
-	
-	/**
-	 * @return The name of the column that holds entity identifiers
-	 */
-	protected String getIDColumnName()
-	{
-		return this.idColumnName;
 	}
 }

@@ -1,7 +1,6 @@
 package alliance_authorization;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import nexus_http.HttpException;
@@ -9,10 +8,8 @@ import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
 import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
-import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
-import nexus_rest.SimpleRestEntityList;
-import vault_database.DatabaseTable;
+import alliance_rest.DatabaseEntityTable;
 import alliance_rest.DatabaseTableEntity;
 
 /**
@@ -37,15 +34,14 @@ public class LoginManagerEntity extends DatabaseTableEntity
 	 * @param name The name of the entity
 	 * @param parent The parent of the entity
 	 * @param keyTable The table which contains the key data
-	 * @param userIDColumName The name of the userID column in the key table
 	 * @param keyColumnName The name of the key column in the key table
 	 * @param passwordChecker The password checker which is used for validating the 
 	 * requests (null if no validation is required)
 	 */
-	public LoginManagerEntity(String name, RestEntity parent, DatabaseTable keyTable, 
-			String userIDColumName, String keyColumnName, PasswordChecker passwordChecker)
+	public LoginManagerEntity(String name, RestEntity parent, DatabaseEntityTable keyTable, 
+			String keyColumnName, PasswordChecker passwordChecker)
 	{
-		super(name, new SimpleRestData(), parent, keyTable, userIDColumName);
+		super(name, new SimpleRestData(), parent, keyTable);
 		
 		this.keyColumnName = keyColumnName;
 		this.passwordChecker = passwordChecker;
@@ -61,8 +57,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 	 */
 	public LoginManagerEntity(String name, RestEntity parent, PasswordChecker passwordChecker)
 	{
-		super(name, new SimpleRestData(), parent, LoginKeyTable.DEFAULT, 
-				LoginKeyTable.getUserIDColumnName());
+		super(name, new SimpleRestData(), parent, LoginKeyTable.DEFAULT);
 		
 		this.keyColumnName = LoginKeyTable.getKeyColumnName();
 		this.passwordChecker = passwordChecker;
@@ -74,8 +69,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 	@Override
 	protected RestEntity loadEntityWithID(String id) throws HttpException
 	{
-		return new LoginKey(getPath() + "/", getTable(), getIDColumnName(), id, 
-				this.keyColumnName);
+		return new LoginKey(getPath() + "/", getTable(), id, this.keyColumnName);
 	}
 
 	@Override
@@ -99,13 +93,6 @@ public class LoginManagerEntity extends DatabaseTableEntity
 		// Can't be deleted
 		throw new MethodNotSupportedException(MethodType.DELETE);
 	}
-
-	@Override
-	protected RestEntityList wrapIntoList(String name, RestEntity parent,
-			List<RestEntity> entities)
-	{
-		return new SimpleRestEntityList(name, parent, entities);
-	}
 	
 	@Override
 	protected RestEntity getMissingEntity(String pathPart,
@@ -114,8 +101,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 		// Checks that the provided password (or a key) is correct
 		try
 		{
-			LoginKey.checkKey(getTable(), getIDColumnName(), pathPart, this.keyColumnName, 
-					parameters.get(this.keyColumnName));
+			LoginKey.checkKey(getTable(), pathPart, this.keyColumnName, parameters);
 		}
 		catch (HttpException e)
 		{
@@ -131,8 +117,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 		catch (NotFoundException e)
 		{
 			// If there wasn't a key already, creates a new key
-			return new LoginKey(this, getTable(), getIDColumnName(), pathPart, parameters, 
-					this.keyColumnName);
+			return new LoginKey(this, getTable(), pathPart, parameters, this.keyColumnName);
 		}
 	}
 	

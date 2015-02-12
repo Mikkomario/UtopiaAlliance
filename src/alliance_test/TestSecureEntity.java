@@ -37,7 +37,7 @@ public class TestSecureEntity extends DatabaseEntity
 	 */
 	public TestSecureEntity(String rootPath, String id) throws HttpException
 	{
-		super(new SimpleRestData(), rootPath, TestTable.SECURE, "id", id);
+		super(new SimpleRestData(), rootPath, TestTable.SECURE, id);
 	}
 
 	/**
@@ -50,7 +50,7 @@ public class TestSecureEntity extends DatabaseEntity
 	public TestSecureEntity(DatabaseEntity parent, String userID, 
 			Map<String, String> parameters) throws HttpException
 	{
-		super(new SimpleRestData(), parent, TestTable.SECURE, "id", userID, 
+		super(new SimpleRestData(), parent, TestTable.SECURE, userID, 
 				modifyParameters(parameters), new HashMap<>());
 	}
 

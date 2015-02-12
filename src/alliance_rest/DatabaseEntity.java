@@ -13,7 +13,6 @@ import javax.xml.stream.XMLStreamWriter;
 
 import vault_database.DatabaseAccessor;
 import vault_database.DatabaseSettings;
-import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
 import vault_database.InvalidTableTypeException;
 import nexus_http.HttpException;
@@ -37,8 +36,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 {
 	// ATTRIBUTES	-------------------------
 	
-	private DatabaseTable table;
-	private String id, idColumnName;
+	private DatabaseEntityTable table;
+	private String id;
 	
 	
 	// CONSTRUCTOR	-------------------------
@@ -48,19 +47,17 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @param content The content of this entity
 	 * @param rootPath The path preceding the entity, including the last '/'
 	 * @param table The table that contains the entity's data
-	 * @param idColumnName The name of the column that contains the entity's identifier
 	 * @param id The entity's identifier with which it can be found from the database
 	 * @throws HttpException If the entity couldn't be read from the database
 	 */
 	public DatabaseEntity(RestData content, String rootPath, 
-			DatabaseTable table, String idColumnName, String id) throws HttpException
+			DatabaseEntityTable table, String id) throws HttpException
 	{
 		super(id, content, rootPath);
 		
 		// Initializes attributes
 		this.table = table;
 		this.id = id;
-		this.idColumnName = idColumnName;
 		
 		// Loads some data from the database
 		Map<String, String> data = readData();
@@ -73,7 +70,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @param content The content of this entity
 	 * @param parent The parent of this entity
 	 * @param table The table that contains the entity's data
-	 * @param idColumnName The name of the column that will hold the entity's identifier
 	 * @param parameters The parameters used for creating this entity. These parameters should 
 	 * be checked beforehand in case they can't be parsed or are otherwise invalid.
 	 * @param defaultParameters The parameters that are used if some are not provided in the 
@@ -81,17 +77,16 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @throws HttpException If the entity couldn't be initialized or written
 	 */
 	public DatabaseEntity(RestData content, RestEntity parent, 
-			DatabaseTable table, String idColumnName, Map<String, String> parameters, 
+			DatabaseEntityTable table, Map<String, String> parameters, 
 			Map<String, String> defaultParameters) throws HttpException
 	{
 		super("unknown", content, parent);
 		
 		// Initializes attributes
 		this.table = table;
-		this.idColumnName = idColumnName;
 		
 		initialize(parameters, defaultParameters);
-		this.id = getAttributes().get(idColumnName);
+		this.id = getAttributes().get(getTable().getIDColumnName());
 		
 		// Saves the entity into database
 		writeData();
@@ -104,7 +99,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @param content The content of this entity
 	 * @param parent The parent of this entity
 	 * @param table The table that contains the entity's data
-	 * @param idColumnName The name of the column that will hold the entity's identifier
 	 * @param id The identifier given to the entity
 	 * @param parameters The parameters used for creating this entity. These parameters should 
 	 * be checked beforehand in case they can't be parsed or are otherwise invalid.
@@ -113,7 +107,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @throws HttpException If the entity couldn't be initialized or written
 	 */
 	public DatabaseEntity(RestData content, RestEntity parent, 
-			DatabaseTable table, String idColumnName, String id, 
+			DatabaseEntityTable table, String id, 
 			Map<String, String> parameters, Map<String, String> defaultParameters) 
 			throws HttpException
 	{
@@ -121,7 +115,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		
 		// Initializes attributes
 		this.table = table;
-		this.idColumnName = idColumnName;
 		
 		initialize(parameters, defaultParameters);
 		this.id = id;
@@ -139,7 +132,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	{
 		try
 		{
-			DatabaseAccessor.delete(getTable(), this.idColumnName, this.id);
+			DatabaseAccessor.delete(getTable(), getTable().getIDColumnName(), this.id);
 		}
 		catch (SQLException | DatabaseUnavailableException e)
 		{
@@ -153,8 +146,9 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		if (getDatabaseID() == null)
 			return "null";
 		if (Character.isDigit(getDatabaseID().charAt(0)))
-			return this.idColumnName + this.id;
-		return this.id;
+			return "_" + this.id;
+		
+		return getDatabaseID();
 	}
 	
 	@Override
@@ -187,7 +181,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	/**
 	 * @return The table that holds the data for this entity
 	 */
-	public DatabaseTable getTable()
+	public DatabaseEntityTable getTable()
 	{
 		return this.table;
 	}
@@ -218,13 +212,14 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			// Inserts the data into the database
 			if (getTable().usesAutoIncrementIndexing())
 				this.id = "" + DatabaseAccessor.insert(getTable(), getColumnData(), 
-						this.idColumnName);
+						getTable().getIDColumnName());
 			else
 			{
 				if (!getTable().usesIndexing())
 					DatabaseAccessor.insert(getTable(), getColumnData());
 				else if (getTable().usesAutoIncrementIndexing())
-					DatabaseAccessor.insert(getTable(), getColumnData(), this.idColumnName);
+					DatabaseAccessor.insert(getTable(), getColumnData(), 
+							getTable().getIDColumnName());
 				else
 				{
 					DatabaseAccessor.insert(getTable(), getColumnData(), 
@@ -259,8 +254,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			
 			statement = accessor.getPreparedStatement("SELECT * FROM " + 
 					DatabaseSettings.getTableHandler().getTableNameForIndex(getTable(), 
-					intID, false) + " WHERE " + this.idColumnName + " = '" + getDatabaseID() 
-					+ "'");
+					intID, false) + " WHERE " + getTable().getIDColumnName() + " = '" + 
+					getDatabaseID() + "'");
 			results = statement.executeQuery();
 			
 			// Data was found
@@ -304,7 +299,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 					getTable().getColumnNames().toArray(new String[0]);
 			String[] columnData = getColumnData().toArray(new String[0]);
 			
-			DatabaseAccessor.update(getTable(), this.idColumnName, getDatabaseID(), 
+			DatabaseAccessor.update(getTable(), getTable().getIDColumnName(), getDatabaseID(), 
 					columnNames, columnData);
 		}
 		catch (DatabaseUnavailableException | SQLException e)
@@ -320,8 +315,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			return false;
 		try
 		{
-			return !DatabaseAccessor.findMatchingData(getTable(), this.idColumnName, 
-					getDatabaseID(), this.idColumnName, 1).isEmpty();
+			return !DatabaseAccessor.findMatchingData(getTable(), getTable().getIDColumnName(), 
+					getDatabaseID(), getTable().getIDColumnName(), 1).isEmpty();
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{
@@ -343,7 +338,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			else if (defaultParameters.containsKey(field))
 				setAttribute(field, defaultParameters.get(field));
 			// The id parameter needn't be in the parameters
-			else if (!field.equals(this.idColumnName))
+			else if (!field.equals(getTable().getIDColumnName()))
 				throw new InvalidParametersException("Parameter " + field + " not provided");
 		}
 	}
@@ -354,7 +349,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		Map<String, String> attributes = getAttributes();
 		for (String columnName : getTable().getColumnNames())
 		{
-			if (columnName.equals(this.idColumnName))
+			if (columnName.equals(getTable().getIDColumnName()))
 				columnData.add(getDatabaseID());
 			else
 				columnData.add(attributes.get(columnName));

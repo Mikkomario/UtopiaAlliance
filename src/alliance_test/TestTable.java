@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import alliance_rest.DatabaseEntityTable;
 import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
 
@@ -14,7 +15,7 @@ import vault_database.DatabaseUnavailableException;
  * @author Mikko Hilpinen
  * @since 26.1.2015
  */
-public enum TestTable implements DatabaseTable
+public enum TestTable implements DatabaseEntityTable
 {
 	// id (auto-increment) | name | friendID
 	
@@ -88,5 +89,11 @@ public enum TestTable implements DatabaseTable
 	public boolean usesIndexing()
 	{
 		return true;
+	}
+
+	@Override
+	public String getIDColumnName()
+	{
+		return "id";
 	}
 }
