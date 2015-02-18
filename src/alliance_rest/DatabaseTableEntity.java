@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import vault_database.DatabaseAccessor;
 import vault_database.DatabaseUnavailableException;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
@@ -80,9 +79,9 @@ public abstract class DatabaseTableEntity extends RestEntity
 		List<String> entityIDs = null;
 		try
 		{
-			entityIDs = DatabaseAccessor.findMatchingData(getTable(), 
+			entityIDs = DatabaseEntityTable.findMatchingIDs(getTable(), 
 					restrictionColumns.toArray(new String[0]), 
-					restrictionValues.toArray(new String[0]), getTable().getIDColumnName());
+					restrictionValues.toArray(new String[0]));
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{

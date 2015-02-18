@@ -18,7 +18,6 @@ import nexus_rest.RestEntity;
 import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
 import nexus_rest.SimpleRestEntityList;
-import vault_database.DatabaseAccessor;
 import vault_database.DatabaseUnavailableException;
 import alliance_rest.DatabaseEntity;
 import alliance_rest.DatabaseEntityTable;
@@ -150,8 +149,8 @@ public class LoginKey extends DatabaseEntity
 		
 		try
 		{
-			List<String> matchingIDs = DatabaseAccessor.findMatchingData(keyTable, keyColumns, 
-					keyValues, keyTable.getIDColumnName(), 1);
+			List<String> matchingIDs = DatabaseEntityTable.findMatchingIDs(keyTable, 
+					keyColumns, keyValues, 1);
 			if (matchingIDs.isEmpty())
 				throw new AuthorizationException("Invalid login key");
 		}

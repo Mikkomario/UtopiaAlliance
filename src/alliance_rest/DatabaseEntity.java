@@ -159,10 +159,10 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	}
 	
 	@Override
-	public void writeLinkAsAttribute(String serverLink, XMLStreamWriter writer) throws 
-			XMLStreamException
+	public void writeLinkAsAttribute(String serverLink, XMLStreamWriter writer, 
+			Map<String, String> parameters) throws XMLStreamException
 	{
-		super.writeLinkAsAttribute(serverLink, writer);
+		super.writeLinkAsAttribute(serverLink, writer, parameters);
 		
 		// Also writes the id as an id attribute
 		if (this.id != null)
@@ -315,8 +315,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			return false;
 		try
 		{
-			return !DatabaseAccessor.findMatchingData(getTable(), getTable().getIDColumnName(), 
-					getDatabaseID(), getTable().getIDColumnName(), 1).isEmpty();
+			return !DatabaseEntityTable.findMatchingIDs(getTable(), 
+					getTable().getIDColumnName(), getDatabaseID(), 1).isEmpty();
 		}
 		catch (DatabaseUnavailableException | SQLException e)
 		{

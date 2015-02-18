@@ -134,8 +134,8 @@ public abstract class SecureEntity extends DatabaseEntity
 	}
 	
 	@Override
-	public void writeContent(String serverLink, XMLStreamWriter writer) throws 
-			MethodNotSupportedException
+	public void writeContent(String serverLink, XMLStreamWriter writer, 
+			Map<String, String> parameters) throws MethodNotSupportedException
 	{
 		// Secure entities cannot be written
 		throw new MethodNotSupportedException(MethodType.GET);
