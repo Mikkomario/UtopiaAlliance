@@ -132,7 +132,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	{
 		try
 		{
-			DatabaseAccessor.delete(getTable(), getTable().getIDColumnName(), this.id);
+			DatabaseAccessor.delete(getTable(), getTable().getIDColumnName(), getDatabaseID());
 		}
 		catch (SQLException | DatabaseUnavailableException e)
 		{
@@ -206,36 +206,38 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		// Checks if the data should be updated instead of written as new
 		if (isInDatabase())
 			updateData();
-		
-		try
+		else
 		{
-			// Inserts the data into the database
-			if (getTable().usesAutoIncrementIndexing())
-				this.id = "" + DatabaseAccessor.insert(getTable(), getColumnData(), 
-						getTable().getIDColumnName());
-			else
+			try
 			{
-				if (!getTable().usesIndexing())
-					DatabaseAccessor.insert(getTable(), getColumnData());
-				else if (getTable().usesAutoIncrementIndexing())
-					DatabaseAccessor.insert(getTable(), getColumnData(), 
+				// Inserts the data into the database
+				if (getTable().usesAutoIncrementIndexing())
+					this.id = "" + DatabaseAccessor.insert(getTable(), getColumnData(), 
 							getTable().getIDColumnName());
 				else
 				{
-					DatabaseAccessor.insert(getTable(), getColumnData(), 
-							Integer.parseInt(getDatabaseID()));
+					if (!getTable().usesIndexing())
+						DatabaseAccessor.insert(getTable(), getColumnData());
+					else if (getTable().usesAutoIncrementIndexing())
+						DatabaseAccessor.insert(getTable(), getColumnData(), 
+								getTable().getIDColumnName());
+					else
+					{
+						DatabaseAccessor.insert(getTable(), getColumnData(), 
+								Integer.parseInt(getDatabaseID()));
+					}
 				}
 			}
-		}
-		catch (DatabaseUnavailableException | SQLException | InvalidTableTypeException e)
-		{
-			throw new InternalServerException("Can't write " + getPath() + 
-					" into the database", e);
-		}
-		catch (NumberFormatException e)
-		{
-			throw new InvalidParametersException("ID " + getDatabaseID() + 
-					" can't be parsed into an integer");
+			catch (DatabaseUnavailableException | SQLException | InvalidTableTypeException e)
+			{
+				throw new InternalServerException("Can't write " + getPath() + 
+						" into the database", e);
+			}
+			catch (NumberFormatException e)
+			{
+				throw new InvalidParametersException("ID " + getDatabaseID() + 
+						" can't be parsed into an integer");
+			}
 		}
 	}
 	
