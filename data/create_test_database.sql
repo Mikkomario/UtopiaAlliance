@@ -19,7 +19,8 @@ CREATE TABLE secure1
 CREATE TABLE loginKeys1
 (
 	userID 		bigint 			NOT NULL PRIMARY KEY,
-	userKey 	varchar(64) 	NOT NULL
+	userKey 	varchar(64) 	NOT NULL,
+	created 	varchar(64)
 );
 
 CREATE TABLE tableamounts

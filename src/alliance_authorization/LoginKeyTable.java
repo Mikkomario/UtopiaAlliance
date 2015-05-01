@@ -1,101 +1,27 @@
 package alliance_authorization;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
 import alliance_rest.DatabaseEntityTable;
-import vault_database.DatabaseTable;
-import vault_database.DatabaseUnavailableException;
 
 /**
- * LoginKeyTable holds the login keys.
- * 
+ * LoginKeyTables are used for storing login key entities. This interface should be 
+ * implemented by an enumeration
  * @author Mikko Hilpinen
- * @since 27.1.2015
+ * @since 1.5.2015
  */
-public enum LoginKeyTable implements DatabaseEntityTable
+public interface LoginKeyTable extends DatabaseEntityTable
 {
 	/**
-	 * The default (and only) login key table. Should contain the following columns: 'userID' 
-	 * and 'userKey'
+	 * @return The name of the column that holds the user ID's
 	 */
-	DEFAULT;
-	
-	
-	// ATTRIBUTES	-------------------------------
-	
-	private static List<String> columnNames = null;
-
-	
-	// IMPLEMENTED METHODS	-----------------------
-	
-	@Override
-	public List<String> getColumnNames()
-	{
-		if (columnNames == null)
-		{
-			try
-			{
-				columnNames = DatabaseTable.readColumnNamesFromDatabase(this);
-			}
-			catch (DatabaseUnavailableException | SQLException e)
-			{
-				System.err.println("Failed to read the column names");
-				e.printStackTrace();
-				columnNames = new ArrayList<>();
-			}
-		}
-		
-		return columnNames;
-	}
-
-	@Override
-	public String getDatabaseName()
-	{
-		return "alliance_db";
-	}
-
-	@Override
-	public String getTableName()
-	{
-		return "loginKeys";
-	}
-
-	@Override
-	public boolean usesAutoIncrementIndexing()
-	{
-		return false;
-	}
-
-	@Override
-	public boolean usesIndexing()
-	{
-		return false;
-	}
-	
-	@Override
-	public String getIDColumnName()
-	{
-		return "userID";
-	}
-	
-	
-	// OTHER METHODS	------------------------
-	
-	/**
-	 * @return The name of the column used for storing the user's identifier
-	 */
-	public static String getUserIDColumnName()
-	{
-		return "userID";
-	}
+	public String getUserIDColumnName();
 	
 	/**
 	 * @return The name of the column used for storing the key
 	 */
-	public static String getKeyColumnName()
-	{
-		return "userKey";
-	}
+	public String getKeyColumnName();
+	
+	/**
+	 * @return The name of the column that holds the key's creation time
+	 */
+	public String getCreationTimeColumnName();
 }

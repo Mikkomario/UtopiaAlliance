@@ -9,7 +9,6 @@ import nexus_http.MethodType;
 import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
 import nexus_rest.SimpleRestData;
-import alliance_rest.DatabaseEntityTable;
 import alliance_rest.DatabaseTableEntity;
 
 /**
@@ -23,8 +22,9 @@ public class LoginManagerEntity extends DatabaseTableEntity
 {
 	// ATTIRBUTES	--------------------------------
 	
-	private String keyColumnName;
+	private LoginKeyTable keyTable;
 	private PasswordChecker passwordChecker;
+	private boolean multiUserAccounts;
 	
 	
 	// CONSTRUCTOR	--------------------------------
@@ -34,33 +34,20 @@ public class LoginManagerEntity extends DatabaseTableEntity
 	 * @param name The name of the entity
 	 * @param parent The parent of the entity
 	 * @param keyTable The table which contains the key data
-	 * @param keyColumnName The name of the key column in the key table
 	 * @param passwordChecker The password checker which is used for validating the 
 	 * requests (null if no validation is required)
+	 * @param useMultiUserAccounts Should the service support multiple users using the same 
+	 * account simultaneously? Allowing this can decrease the information security of the 
+	 * program but will increase usability in multi user situations.
 	 */
-	public LoginManagerEntity(String name, RestEntity parent, DatabaseEntityTable keyTable, 
-			String keyColumnName, PasswordChecker passwordChecker)
+	public LoginManagerEntity(String name, RestEntity parent, LoginKeyTable keyTable, 
+			PasswordChecker passwordChecker, boolean useMultiUserAccounts)
 	{
 		super(name, new SimpleRestData(), parent, keyTable);
 		
-		this.keyColumnName = keyColumnName;
+		this.keyTable = keyTable;
 		this.passwordChecker = passwordChecker;
-	}
-	
-	/**
-	 * Creates a new entity. The entity uses LoginKeyTable, so you should take it into account.
-	 * @param name The name of the entity
-	 * @param parent The parent of the entity
-	 * @param passwordChecker The password checker which is used for validating the 
-	 * requests (null if no validation is required)
-	 * @see LoginKeyTable
-	 */
-	public LoginManagerEntity(String name, RestEntity parent, PasswordChecker passwordChecker)
-	{
-		super(name, new SimpleRestData(), parent, LoginKeyTable.DEFAULT);
-		
-		this.keyColumnName = LoginKeyTable.getKeyColumnName();
-		this.passwordChecker = passwordChecker;
+		this.multiUserAccounts = useMultiUserAccounts;
 	}
 	
 	
@@ -69,7 +56,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 	@Override
 	protected RestEntity loadEntityWithID(String id) throws HttpException
 	{
-		return new LoginKey(getPath() + "/", getTable(), id, this.keyColumnName);
+		return new LoginKey(getPath() + "/", this.keyTable, id);
 	}
 
 	@Override
@@ -95,19 +82,23 @@ public class LoginManagerEntity extends DatabaseTableEntity
 	}
 	
 	@Override
-	protected RestEntity getMissingEntity(String pathPart,
-			Map<String, String> parameters) throws HttpException
+	protected RestEntity getMissingEntity(String pathPart, Map<String, String> parameters) 
+			throws HttpException
 	{
 		// Checks that the provided password (or a key) is correct
 		try
 		{
-			LoginKey.checkKey(getTable(), pathPart, this.keyColumnName, parameters);
+			LoginKey.checkKey(this.keyTable, pathPart, parameters);
 		}
 		catch (HttpException e)
 		{
 			if (this.passwordChecker != null)
 				this.passwordChecker.checkPassword(pathPart, parameters);
 		}
+		
+		// For multi-user accounts, a new key is generated at each login
+		if (this.multiUserAccounts)
+			return new LoginKey(this, this.keyTable, pathPart, parameters);
 		
 		// Tries to find an existing key
 		try
@@ -117,7 +108,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 		catch (NotFoundException e)
 		{
 			// If there wasn't a key already, creates a new key
-			return new LoginKey(this, getTable(), pathPart, parameters, this.keyColumnName);
+			return new LoginKey(this, this.keyTable, pathPart, parameters);
 		}
 	}
 	

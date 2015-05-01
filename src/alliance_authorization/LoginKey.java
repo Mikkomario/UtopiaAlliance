@@ -3,6 +3,7 @@ package alliance_authorization;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,12 +16,12 @@ import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
 import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
-import nexus_rest.RestEntityList;
 import nexus_rest.SimpleRestData;
-import nexus_rest.SimpleRestEntityList;
+import vault_database.DatabaseAccessor;
 import vault_database.DatabaseUnavailableException;
 import alliance_rest.DatabaseEntity;
 import alliance_rest.DatabaseEntityTable;
+import alliance_util.SimpleDate;
 
 /**
  * LoginKeys are used when some functionalities are to be limited for certain users only.
@@ -30,68 +31,43 @@ import alliance_rest.DatabaseEntityTable;
  */
 public class LoginKey extends DatabaseEntity
 {
+	// ATTRIBUTES	-------------------------
+	
+	private LoginKeyTable table;
+	
+	
 	// CONSTRUCTOR	-------------------------
 	
 	/**
 	 * Creates a new login key by reading its data from the database
 	 * @param rootPath The path preceding the entity
 	 * @param table The table that holds the key data.
-	 * @param userID The identifier with which the correct key data is found
-	 * @param keyColumnName The name of the column that holds the key
+	 * @param id The identifier with which the correct key data is found
 	 * @throws HttpException If the entity couldn't be read or created
 	 */
-	public LoginKey(String rootPath, DatabaseEntityTable table, String userID, 
-			String keyColumnName) throws HttpException
+	public LoginKey(String rootPath, LoginKeyTable table, String id) throws HttpException
 	{
-		super(new SimpleRestData(), rootPath, table, userID);
-	}
-	
-	/**
-	 * Creates a new login key by reading its data from the database. LoginKeyTable.DEFAULT is 
-	 * used for storing the keys. You must take this into account.
-	 * @param rootPath The path preceding the entity
-	 * @param userID The identifier with which the correct key data is found
-	 * @throws HttpException If the entity couldn't be read or created
-	 * @see LoginKeyTable
-	 */
-	public LoginKey(String rootPath, String userID) throws HttpException
-	{
-		super(new SimpleRestData(), rootPath, LoginKeyTable.DEFAULT, userID);
+		super(new SimpleRestData(), rootPath, table, id);
+		
+		this.table = table;
 	}
 
 	/**
-	 * Creates a new login key with the given parameters. The key parameter is generated 
-	 * automatically.
+	 * Creates a new login key with the given parameters. The key parameter and the creation 
+	 * time parameter are generated automatically.
 	 * @param parent The parent entity of this key
 	 * @param table The table that holds the key data
 	 * @param userID The unique identifier of the user of this key
 	 * @param parameters The parameters provided by the client
-	 * @param keyColumnName The name of the column that holds the key data
 	 * @throws HttpException If the key couldn't be created based on the given data
 	 */
-	public LoginKey(RestEntity parent, DatabaseEntityTable table, String userID, 
-			Map<String, String> parameters, String keyColumnName) throws HttpException
+	public LoginKey(RestEntity parent, LoginKeyTable table, String userID, 
+			Map<String, String> parameters) throws HttpException
 	{
 		super(new SimpleRestData(), parent, table, userID, 
-				modifyConstructionParameters(parameters, keyColumnName), new HashMap<>());
-	}
-	
-	/**
-	 * Creates a new login key with the given parameters. The key parameter is generated 
-	 * automatically. LoginKeyTable.Default is used for storing the keys. You must take this 
-	 * into account.
-	 * @param parent The parent entity of this key
-	 * @param userID The unique identifier of the user of this key
-	 * @param parameters The parameters provided by the client
-	 * @throws HttpException If the key couldn't be created based on the given data
-	 * @see LoginKeyTable
-	 */
-	public LoginKey(RestEntity parent, String userID, Map<String, String> parameters) 
-			throws HttpException
-	{
-		super(new SimpleRestData(), parent, LoginKeyTable.DEFAULT, userID, 
-				modifyConstructionParameters(parameters, LoginKeyTable.getKeyColumnName()), 
-				new HashMap<>());
+				modifyConstructionParameters(parameters, userID, table), new HashMap<>());
+		
+		this.table = table;
 	}
 	
 	
@@ -118,33 +94,88 @@ public class LoginKey extends DatabaseEntity
 	{
 		throw new NotFoundException(getPath() + "/" + pathPart);
 	}
-
+	
+	/**
+	 * Login keys require authorization before they can be deleted by the client. They are not 
+	 * deleted by id but by key since multiple keys can exist for a single userID could exist.
+	 */
 	@Override
-	protected RestEntityList wrapIntoList(String name, RestEntity parent,
-			List<RestEntity> entities)
+	protected void prepareDelete(Map<String, String> parameters)
+			throws HttpException
 	{
-		return new SimpleRestEntityList(name, parent, entities);
+		// Normal delete requires authorization
+		checkKey(this.table, getUserID(), parameters);
+		
+		deleteWithoutAuthorization();
 	}
 	
 	
 	// OTHER METHODS	------------------------------
 	
 	/**
+	 * Deletes the key from the database. Doesn't require authorization. Also, doesn't delete 
+	 * the entity by id but by key.
+	 * @throws HttpException If the operation failed
+	 */
+	public void deleteWithoutAuthorization() throws HttpException
+	{
+		try
+		{
+			DatabaseAccessor.delete(getTable(), this.table.getKeyColumnName(), getKey());
+		}
+		catch (SQLException | DatabaseUnavailableException e)
+		{
+			throw new InternalServerException("Couldn't delete " + getPath(), e);
+		}
+	}
+	
+	/**
+	 * @return The identifier of the user of this key
+	 */
+	public String getUserID()
+	{
+		return getAttributes().get(this.table.getUserIDColumnName());
+	}
+	
+	/**
+	 * @return The unique attribute key of this key
+	 */
+	public String getKey()
+	{
+		return getAttributes().get(this.table.getKeyColumnName());
+	}
+	
+	/**
+	 * @return The date when the key was created
+	 * @throws HttpException If the creation time couldn't be read
+	 */
+	public SimpleDate getCreationTime() throws HttpException
+	{
+		try
+		{
+			return new SimpleDate(getAttributes().get(this.table.getCreationTimeColumnName()));
+		}
+		catch (ParseException e)
+		{
+			throw new InternalServerException("Failed to read login key creation time", e);
+		}
+	}
+	
+	/**
 	 * Checks if the given login key is correct
 	 * @param keyTable The table that holds login key data
 	 * @param userID The identifier of the user in question
-	 * @param keyColumnName The name of the column that holds the keys
 	 * @param key The key provided by the client
 	 * @throws HttpException Throws an authorization exception if the key was not acceptable
 	 */
-	public static void checkKey(DatabaseEntityTable keyTable, 
-			String userID, String keyColumnName, String key) throws HttpException
+	public static void checkKey(LoginKeyTable keyTable, String userID, String key) throws 
+			HttpException
 	{
 		if (userID == null || key == null)
 			throw new AuthorizationException("Invalid login key");
 		
 		// Checks if there is a matching key in the database
-		String[] keyColumns = {keyTable.getIDColumnName(), keyColumnName};
+		String[] keyColumns = {keyTable.getUserIDColumnName(), keyTable.getKeyColumnName()};
 		String[] keyValues = {userID, key};
 		
 		try
@@ -161,61 +192,36 @@ public class LoginKey extends DatabaseEntity
 	}
 	
 	/**
-	 * Checks if the given key is correct. LoginKeyTable is used in this method. You should 
-	 * take this into account.
-	 * @param userID The provided user identifier
-	 * @param key The provided key
-	 * @throws HttpException If the key was not acceptable or there were other problems
-	 * @see LoginKeyTable
-	 */
-	public static void checkKey(String userID, String key) throws HttpException
-	{
-		checkKey(LoginKeyTable.DEFAULT, userID, LoginKeyTable.getKeyColumnName(), key);
-	}
-	
-	/**
 	 * Checks if the given login key is correct
 	 * @param keyTable The table that holds login key data
 	 * @param userID The unique identifier of the user the key is for
-	 * @param keyColumnName The name of the column that holds the keys
 	 * @param parameters The parameters provided by the client
 	 * @throws HttpException Throws an authorization exception if the key was not acceptable
 	 */
-	public static void checkKey(DatabaseEntityTable keyTable, 
-			String userID, String keyColumnName, Map<String, String> parameters) 
-			throws HttpException
+	public static void checkKey(LoginKeyTable keyTable, String userID, 
+			Map<String, String> parameters) throws HttpException
 	{
 		// Checks that the correct parameters exist
-		String key = parameters.get(keyColumnName);
+		String key = parameters.get(keyTable.getKeyColumnName());
 		
 		if (userID == null || key == null)
 		{
 			throw new InvalidParametersException("Parameter " + 
-					keyColumnName + " required");
+					keyTable.getKeyColumnName() + " required");
 		}
 		
 		// Then checks the key value
-		checkKey(keyTable, userID, keyColumnName, key);
-	}
-	
-	/**
-	 * Checks if the given login key is correct. LoginKeyTable is used in this method. You 
-	 * should take this into account.
-	 * @param userID The unique identifier of the user the key is for
-	 * @param parameters The parameters provided by the client
-	 * @throws HttpException Throws an authorization exception if the key was not acceptable
-	 * @see LoginKeyTable
-	 */
-	public static void checkKey(String userID, Map<String, String> parameters) throws HttpException
-	{
-		checkKey(LoginKeyTable.DEFAULT, userID, LoginKeyTable.getKeyColumnName(), parameters);
+		checkKey(keyTable, userID, key);
 	}
 	
 	private static Map<String, String> modifyConstructionParameters(
-			Map<String, String> parameters, String keyColumnName)
+			Map<String, String> parameters,  String userID, LoginKeyTable table)
 	{
 		// Adds a generated key to the parameters
-		parameters.put(keyColumnName, generateAuthKey());
+		parameters.put(table.getKeyColumnName(), generateAuthKey());
+		// Also adds the userID to the parameters
+		parameters.put(table.getUserIDColumnName(), userID);
+		parameters.put(table.getCreationTimeColumnName(), new SimpleDate().toString());
 		
 		return parameters;
 	}

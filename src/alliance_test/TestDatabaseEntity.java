@@ -54,7 +54,7 @@ public class TestDatabaseEntity extends DatabaseEntity
 	@Override
 	public void Put(Map<String, String> parameters) throws HttpException
 	{
-		LoginKey.checkKey(getDatabaseID(), parameters);
+		LoginKey.checkKey(TestLoginKeyTable.DEFAULT, getDatabaseID(), parameters);
 		
 		// Checks the parameters but allows update
 		defaultPut(checkParameters(parameters));

@@ -49,6 +49,6 @@ public class TestSecureEntity extends SecureEntity
 	protected void authorizeModification(Map<String, String> parameters)
 			throws HttpException
 	{
-		LoginKey.checkKey(getDatabaseID(), parameters);
+		LoginKey.checkKey(TestLoginKeyTable.DEFAULT, getDatabaseID(), parameters);
 	}
 }

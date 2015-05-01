@@ -66,8 +66,8 @@ public class AllianceTestServer
 		// Creates the server entities
 		RestEntity root = new TestRestEntity("root", null);
 		new TestTableEntity("entities", root);
-		new LoginManagerEntity("login", root, new PasswordChecker(TestTable.SECURE, 
-				"passwordHash", "id"));
+		new LoginManagerEntity("login", root, TestLoginKeyTable.DEFAULT, 
+				new PasswordChecker(TestTable.SECURE, "passwordHash", "id"), false);
 		
 		// Starts the server
 		StaticRestServer.setRootEntity(root);
