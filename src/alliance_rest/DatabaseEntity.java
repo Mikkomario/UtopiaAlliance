@@ -143,11 +143,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	@Override
 	public String getName()
 	{
-		if (getDatabaseID() == null)
-			return "null";
-		if (Character.isDigit(getDatabaseID().charAt(0)))
-			return "_" + this.id;
-		
 		return getDatabaseID();
 	}
 	
@@ -167,12 +162,6 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		// Also writes the id as an id attribute
 		if (this.id != null)
 			writer.writeAttribute("id", this.id);
-	}
-	
-	@Override
-	public String getPath()
-	{
-		return getRootPath() + getDatabaseID();
 	}
 	
 	
@@ -230,6 +219,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			}
 			catch (DatabaseUnavailableException | SQLException | InvalidTableTypeException e)
 			{
+				// TODO: How about localization?
 				throw new InternalServerException("Can't write " + getPath() + 
 						" into the database", e);
 			}

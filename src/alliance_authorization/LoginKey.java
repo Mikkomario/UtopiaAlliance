@@ -106,7 +106,15 @@ public class LoginKey extends DatabaseEntity
 		// Normal delete requires authorization
 		checkKey(this.table, getUserID(), parameters);
 		
-		deleteWithoutAuthorization();
+		try
+		{
+			DatabaseAccessor.delete(getTable(), this.table.getKeyColumnName(), 
+					parameters.get(this.table.getKeyColumnName()));
+		}
+		catch (SQLException | DatabaseUnavailableException e)
+		{
+			throw new InternalServerException("Couldn't delete the login key", e);
+		}
 	}
 	
 	
