@@ -7,12 +7,15 @@ import java.util.Map;
 
 import javax.xml.stream.XMLStreamWriter;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
 import nexus_http.InvalidParametersException;
 import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
 import nexus_http.NotFoundException;
+import nexus_rest.ContentType;
 import nexus_rest.RestEntity;
 import nexus_rest.SimpleRestData;
 import alliance_authorization.PasswordHash;
@@ -134,7 +137,8 @@ public abstract class SecureEntity extends DatabaseEntity
 	}
 	
 	@Override
-	public void writeContent(String serverLink, XMLStreamWriter writer, 
+	public void writeContent(String serverLink, XMLStreamWriter xmlWriter, 
+			JsonGenerator jsonWriter, ContentType contentType, 
 			Map<String, String> parameters) throws MethodNotSupportedException
 	{
 		// Secure entities cannot be written

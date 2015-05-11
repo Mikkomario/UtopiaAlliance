@@ -4,6 +4,7 @@ import java.sql.SQLException;
 
 import alliance_authorization.LoginManagerEntity;
 import alliance_authorization.PasswordChecker;
+import nexus_rest.ContentType;
 import nexus_rest.RestEntity;
 import nexus_rest.StaticRestServer;
 import nexus_test.HttpServerAnalyzer;
@@ -38,23 +39,24 @@ public class AllianceTestServer
 	{
 		if (args.length < 4)
 		{
-			System.out.println("Please provide the correct parameters (ip, port, use encoding, "
+			System.out.println("Please provide the correct parameters (ip, port, "
 					+ "password, user (optional), database address (optional)");
 			System.exit(0);
 		}
 		
 		String connectionTarget = "jdbc:mysql://localhost:3306/";
 		String user = "root";
+		int port = Integer.parseInt(args[1]);
 		
-		if (args.length >= 6)
-			connectionTarget = args[5];
 		if (args.length >= 5)
-			user = args[4];
+			connectionTarget = args[4];
+		if (args.length >= 4)
+			user = args[3];
 		
 		// Initializes database settings
 		try
 		{
-			DatabaseSettings.initialize(connectionTarget, user, args[3], 100, "alliance_db", 
+			DatabaseSettings.initialize(connectionTarget, user, args[2], 100, "alliance_db", 
 					"tableamounts");
 		}
 		catch (DatabaseUnavailableException | SQLException e)
@@ -71,8 +73,7 @@ public class AllianceTestServer
 				new PasswordChecker(TestTable.SECURE, "passwordHash", "id"), false);
 		
 		// Starts the server
-		StaticRestServer.setRootEntity(root);
-		StaticRestServer.setEventListener(new HttpServerAnalyzer());
-		StaticRestServer.startServer(args);
+		StaticRestServer.startServer(args[0], port, true, ContentType.XML, root, 
+				new HttpServerAnalyzer());
 	}
 }

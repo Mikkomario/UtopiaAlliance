@@ -57,7 +57,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		
 		// Initializes attributes
 		this.table = table;
-		this.id = id;
+		setDatabaseID(id);
 		
 		// Loads some data from the database
 		Map<String, String> data = readData();
@@ -86,7 +86,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		this.table = table;
 		
 		initialize(parameters, defaultParameters);
-		this.id = getAttributes().get(getTable().getIDColumnName());
+		setDatabaseID(getAttributes().get(getTable().getIDColumnName()));
 		
 		// Saves the entity into database
 		writeData();
@@ -117,7 +117,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		this.table = table;
 		
 		initialize(parameters, defaultParameters);
-		this.id = id;
+		setDatabaseID(id);
 		
 		// Saves the entity into database
 		writeData();
@@ -161,7 +161,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		
 		// Also writes the id as an id attribute
 		if (this.id != null)
-			writer.writeAttribute("id", this.id);
+			writer.writeAttribute("id", getDatabaseID());
 	}
 	
 	
@@ -201,8 +201,8 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			{
 				// Inserts the data into the database
 				if (getTable().usesAutoIncrementIndexing())
-					this.id = "" + DatabaseAccessor.insert(getTable(), getColumnData(), 
-							getTable().getIDColumnName());
+					setDatabaseID("" + DatabaseAccessor.insert(getTable(), getColumnData(), 
+							getTable().getIDColumnName()));
 				else
 				{
 					if (!getTable().usesIndexing())
@@ -229,6 +229,12 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 						" can't be parsed into an integer");
 			}
 		}
+	}
+	
+	private void setDatabaseID(String newID)
+	{
+		this.id = newID;
+		setAttribute(getTable().getIDColumnName(), newID);
 	}
 	
 	private Map<String, String> readData() throws HttpException
