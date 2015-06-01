@@ -6,7 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import vault_database.DatabaseAccessor;
+import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
+import vault_database.InvalidTableTypeException;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
 import nexus_rest.RestData;
@@ -22,7 +25,7 @@ public abstract class DatabaseTableEntity extends RestEntity
 {
 	// ATTRIBUTES	-------------------------------
 	
-	private DatabaseEntityTable table;
+	private DatabaseTable table;
 	
 	
 	// CONSTRUCTOR	-------------------------------
@@ -35,7 +38,7 @@ public abstract class DatabaseTableEntity extends RestEntity
 	 * @param table The table that holds the entities under this one
 	 */
 	public DatabaseTableEntity(String name, RestData content, RestEntity parent, 
-			DatabaseEntityTable table)
+			DatabaseTable table)
 	{
 		super(name, content, parent);
 		
@@ -79,13 +82,13 @@ public abstract class DatabaseTableEntity extends RestEntity
 		List<String> entityIDs = null;
 		try
 		{
-			entityIDs = DatabaseEntityTable.findMatchingIDs(getTable(), 
+			entityIDs = DatabaseAccessor.findMatchingIDs(getTable(), 
 					restrictionColumns.toArray(new String[0]), 
 					restrictionValues.toArray(new String[0]));
 		}
-		catch (DatabaseUnavailableException | SQLException e)
+		catch (DatabaseUnavailableException | SQLException | InvalidTableTypeException e)
 		{
-			throw new InternalServerException("Failed to read entity data", e);
+			throw new InternalServerException("Failed to read entity identifiers", e);
 		}
 		
 		Map<String, RestEntity> entities = new HashMap<>();
@@ -112,7 +115,7 @@ public abstract class DatabaseTableEntity extends RestEntity
 	/**
 	 * @return The table this entity uses
 	 */
-	protected DatabaseEntityTable getTable()
+	protected DatabaseTable getTable()
 	{
 		return this.table;
 	}

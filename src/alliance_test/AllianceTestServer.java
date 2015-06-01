@@ -37,7 +37,7 @@ public class AllianceTestServer
 	 */
 	public static void main(String[] args)
 	{
-		if (args.length < 4)
+		if (args.length < 3)
 		{
 			System.out.println("Please provide the correct parameters (ip, port, "
 					+ "password, user (optional), database address (optional)");

@@ -1,0 +1,37 @@
+* This is used for testing the alliance test server
+
+GET root
+
+* Creates new users
+#userID1:@id=POST root/entities?name=Matti Meikäläinen&password=test
+#userID2:@id=POST root/entities?name=Erkki Esimerkki&friendID=#userID1&password=test
+#userID3:@id=POST root/entities?name=Maija Meikäläinen&friendID=#userID1&password=test
+
+* Logs in
+#key1:userKey=GET root/login/#userID1/userKey?password=test
+#key2:userKey=GET root/login/#userID2/userKey?password=test
+#key3:userKey=GET root/login/#userID3/userKey?password=test
+
+* Reads data
+GET root/entities/#userID1
+GET root/entities/#userID2
+GET root/entities/#userID3/friend
+
+* Changes password
+PUT root/entities/#userID1/secure?password=test2&userKey=#key1
+
+* Logs out
+DELETE root/login/#userID1?userKey=#key1
+
+* Logs back in
+#newKey:userKey=GET root/login/#userID1?password=test2
+
+* Deletes the users
+DELETE root/entities/#userID1?userKey=#newKey
+DELETE root/entities/#userID2?userKey=#key2
+DELETE root/entities/#userID3?userKey=#key3
+
+* Logs out
+DELETE root/login/#userID1?userKey=#newKey
+DELETE root/login/#userID2?userKey=#key2
+DELETE root/login/#userID3?userKey=#key3

@@ -7,6 +7,8 @@ import java.util.Map;
 
 import javax.xml.stream.XMLStreamWriter;
 
+import vault_database.DatabaseTable;
+
 import com.fasterxml.jackson.core.JsonGenerator;
 
 import nexus_http.HttpException;
@@ -20,7 +22,6 @@ import nexus_rest.RestEntity;
 import nexus_rest.SimpleRestData;
 import alliance_authorization.PasswordHash;
 import alliance_rest.DatabaseEntity;
-import alliance_rest.DatabaseEntityTable;
 
 /**
  * This entity holds a single piece of information that will be hashed and won't be shown 
@@ -48,7 +49,7 @@ public abstract class SecureEntity extends DatabaseEntity
 	 * @param secureParameterName The name of the parameter that has been hashed
 	 * @throws HttpException If the entity couldn't be read
 	 */
-	public SecureEntity(DatabaseEntityTable table, String rootPath, String name, 
+	public SecureEntity(DatabaseTable table, String rootPath, String name, 
 			String userID, String hashColumnName, String secureParameterName) 
 			throws HttpException
 	{
@@ -67,11 +68,10 @@ public abstract class SecureEntity extends DatabaseEntity
 	 * @param userID The identifier of the user this secure entity is for
 	 * @param hashColumnName The name of the column that contains the hashed information
 	 * @param secureParameterName The name of the parameter that will be hashed
-	 * @param parameters The parameters provided by the client. The only necessary parameter 
-	 * is 'password', which will be hashed and stored as 'passwordHash'
+	 * @param parameters The parameters provided by the client.
 	 * @throws HttpException If the entity couldn't be created
 	 */
-	public SecureEntity(DatabaseEntityTable table, DatabaseEntity parent, String name, 
+	public SecureEntity(DatabaseTable table, DatabaseEntity parent, String name, 
 			String userID, String hashColumnName, String secureParameterName, 
 			Map<String, String> parameters) throws HttpException
 	{
@@ -111,7 +111,7 @@ public abstract class SecureEntity extends DatabaseEntity
 			{
 				setAttribute(this.hashColumnName, PasswordHash.createHash(
 						parameters.get(this.secureParameterName)));
-				writeData();
+				updateToDatabase();
 			}
 			catch (NoSuchAlgorithmException | InvalidKeySpecException e)
 			{

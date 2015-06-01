@@ -5,13 +5,10 @@ import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import nexus_http.AuthorizationException;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
-import nexus_http.InvalidParametersException;
 import nexus_http.MethodNotSupportedException;
 import nexus_http.MethodType;
 import nexus_http.NotFoundException;
@@ -20,7 +17,6 @@ import nexus_rest.SimpleRestData;
 import vault_database.DatabaseAccessor;
 import vault_database.DatabaseUnavailableException;
 import alliance_rest.DatabaseEntity;
-import alliance_rest.DatabaseEntityTable;
 import alliance_util.SimpleDate;
 
 /**
@@ -97,14 +93,14 @@ public class LoginKey extends DatabaseEntity
 	
 	/**
 	 * Login keys require authorization before they can be deleted by the client. They are not 
-	 * deleted by id but by key since multiple keys can exist for a single userID could exist.
+	 * deleted by id but by key since multiple keys can exist for a single userID.
 	 */
 	@Override
 	protected void prepareDelete(Map<String, String> parameters)
 			throws HttpException
 	{
 		// Normal delete requires authorization
-		checkKey(this.table, getUserID(), parameters);
+		LoginKeyTable.checkKey(this.table, getUserID(), parameters);
 		
 		try
 		{
@@ -167,59 +163,6 @@ public class LoginKey extends DatabaseEntity
 		{
 			throw new InternalServerException("Failed to read login key creation time", e);
 		}
-	}
-	
-	/**
-	 * Checks if the given login key is correct
-	 * @param keyTable The table that holds login key data
-	 * @param userID The identifier of the user in question
-	 * @param key The key provided by the client
-	 * @throws HttpException Throws an authorization exception if the key was not acceptable
-	 */
-	public static void checkKey(LoginKeyTable keyTable, String userID, String key) throws 
-			HttpException
-	{
-		if (userID == null || key == null)
-			throw new AuthorizationException("Invalid login key");
-		
-		// Checks if there is a matching key in the database
-		String[] keyColumns = {keyTable.getUserIDColumnName(), keyTable.getKeyColumnName()};
-		String[] keyValues = {userID, key};
-		
-		try
-		{
-			List<String> matchingIDs = DatabaseEntityTable.findMatchingIDs(keyTable, 
-					keyColumns, keyValues, 1);
-			if (matchingIDs.isEmpty())
-				throw new AuthorizationException("Invalid login key");
-		}
-		catch (DatabaseUnavailableException | SQLException e)
-		{
-			throw new InternalServerException("Failed to check the key", e);
-		}
-	}
-	
-	/**
-	 * Checks if the given login key is correct
-	 * @param keyTable The table that holds login key data
-	 * @param userID The unique identifier of the user the key is for
-	 * @param parameters The parameters provided by the client
-	 * @throws HttpException Throws an authorization exception if the key was not acceptable
-	 */
-	public static void checkKey(LoginKeyTable keyTable, String userID, 
-			Map<String, String> parameters) throws HttpException
-	{
-		// Checks that the correct parameters exist
-		String key = parameters.get(keyTable.getKeyColumnName());
-		
-		if (userID == null || key == null)
-		{
-			throw new InvalidParametersException("Parameter " + 
-					keyTable.getKeyColumnName() + " required");
-		}
-		
-		// Then checks the key value
-		checkKey(keyTable, userID, key);
 	}
 	
 	private static Map<String, String> modifyConstructionParameters(

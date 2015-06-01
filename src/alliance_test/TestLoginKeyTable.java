@@ -1,7 +1,6 @@
 package alliance_test;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 import alliance_authorization.LoginKeyTable;
@@ -17,7 +16,7 @@ import vault_database.DatabaseUnavailableException;
 public enum TestLoginKeyTable implements LoginKeyTable
 {
 	/**
-	 * The default (and only) default login key table. Should contain the following columns: 
+	 * The default (and only) login key table. Should contain the following columns: 
 	 * 'userID', 'userKey' and 'created'
 	 */
 	DEFAULT;
@@ -25,7 +24,7 @@ public enum TestLoginKeyTable implements LoginKeyTable
 	
 	// ATTRIBUTES	-------------------------------
 	
-	private static List<String> columnNames = null;
+	private static List<ColumnInfo> columnInfo = null;
 
 	
 	// IMPLEMENTED METHODS	-----------------------
@@ -33,21 +32,7 @@ public enum TestLoginKeyTable implements LoginKeyTable
 	@Override
 	public List<String> getColumnNames()
 	{
-		if (columnNames == null)
-		{
-			try
-			{
-				columnNames = DatabaseTable.readColumnNamesFromDatabase(this);
-			}
-			catch (DatabaseUnavailableException | SQLException e)
-			{
-				System.err.println("Failed to read the column names");
-				e.printStackTrace();
-				columnNames = new ArrayList<>();
-			}
-		}
-		
-		return columnNames;
+		return DatabaseTable.getColumnNamesFromColumnInfo(getColumnInfo());
 	}
 
 	@Override
@@ -67,22 +52,7 @@ public enum TestLoginKeyTable implements LoginKeyTable
 	{
 		return false;
 	}
-
-	@Override
-	public boolean usesIndexing()
-	{
-		return false;
-	}
 	
-	@Override
-	public String getIDColumnName()
-	{
-		return "userID";
-	}
-	
-	
-	// OTHER METHODS	------------------------
-
 	@Override
 	public String getUserIDColumnName()
 	{
@@ -99,5 +69,38 @@ public enum TestLoginKeyTable implements LoginKeyTable
 	public String getCreationTimeColumnName()
 	{
 		return "created";
+	}
+
+	@Override
+	public boolean usesIntegerIndexing()
+	{
+		return true;
+	}
+
+	@Override
+	public String getPrimaryColumnName()
+	{
+		return getUserIDColumnName();
+	}
+	
+	
+	// OTHER METHODS	------------------------	
+	
+	private List<ColumnInfo> getColumnInfo()
+	{
+		if (columnInfo == null)
+		{
+			try
+			{
+				columnInfo = DatabaseTable.readColumnInfoFromDatabase(this);
+			}
+			catch (DatabaseUnavailableException | SQLException e)
+			{
+				System.err.println("Failed to read the column info");
+				e.printStackTrace();
+			}
+		}
+		
+		return columnInfo;
 	}
 }

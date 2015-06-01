@@ -1,11 +1,11 @@
 package alliance_test;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import alliance_rest.DatabaseEntityTable;
 import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
 
@@ -15,7 +15,7 @@ import vault_database.DatabaseUnavailableException;
  * @author Mikko Hilpinen
  * @since 26.1.2015
  */
-public enum TestTable implements DatabaseEntityTable
+public enum TestTable implements DatabaseTable
 {
 	// id (auto-increment) | name | friendID
 	
@@ -30,7 +30,7 @@ public enum TestTable implements DatabaseEntityTable
 	
 	// ATTRIBUTES	---------------------------
 	
-	private static Map<DatabaseTable, List<String>> columnNames = null;
+	private static Map<DatabaseTable, List<ColumnInfo>> columnInfo = null;
 	
 	
 	// IMPLEMENTED METHODS	-------------------
@@ -38,21 +38,7 @@ public enum TestTable implements DatabaseEntityTable
 	@Override
 	public List<String> getColumnNames()
 	{
-		try
-		{
-			if (columnNames == null)
-				columnNames = new HashMap<>();
-			
-			if (!columnNames.containsKey(this))
-				columnNames.put(this, DatabaseTable.readColumnNamesFromDatabase(this));
-		}
-		catch (DatabaseUnavailableException | SQLException e)
-		{
-			System.err.println("Failed to read the column names");
-			e.printStackTrace();
-		}
-		
-		return columnNames.get(this);
+		return DatabaseTable.getColumnNamesFromColumnInfo(getColumnInfo());
 	}
 
 	@Override
@@ -76,24 +62,43 @@ public enum TestTable implements DatabaseEntityTable
 	@Override
 	public boolean usesAutoIncrementIndexing()
 	{
-		switch (this)
-		{
-			case ENTITY: return true;
-			case SECURE: return false;
-		}
-		
-		return false;
+		return DatabaseTable.findPrimaryColumnInfo(getColumnInfo()).usesAutoIncrementIndexing();
 	}
 
 	@Override
-	public boolean usesIndexing()
+	public boolean usesIntegerIndexing()
 	{
 		return true;
 	}
 
 	@Override
-	public String getIDColumnName()
+	public String getPrimaryColumnName()
 	{
-		return "id";
+		return DatabaseTable.findPrimaryColumnInfo(getColumnInfo()).getColumnName();
+	}
+	
+	
+	// OTHER METHODS	---------------------------
+	
+	private List<ColumnInfo> getColumnInfo()
+	{
+		if (columnInfo == null)
+			columnInfo = new HashMap<>();
+		
+		if (!columnInfo.containsKey(this))
+		{
+			try
+			{
+				columnInfo.put(this, DatabaseTable.readColumnInfoFromDatabase(this));
+			}
+			catch (DatabaseUnavailableException | SQLException e)
+			{
+				System.err.println("Failed to read the column info");
+				e.printStackTrace();
+				return new ArrayList<>();
+			}
+		}
+		
+		return columnInfo.get(this);
 	}
 }

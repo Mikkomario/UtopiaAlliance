@@ -1,20 +1,17 @@
 package alliance_rest;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import vault_database.DatabaseAccessor;
-import vault_database.DatabaseSettings;
+import vault_database.DatabaseTable;
 import vault_database.DatabaseUnavailableException;
 import vault_database.InvalidTableTypeException;
+import vault_recording.DatabaseReadable;
+import vault_recording.DatabaseWritable;
 import nexus_http.HttpException;
 import nexus_http.InternalServerException;
 import nexus_http.InvalidParametersException;
@@ -32,11 +29,12 @@ import nexus_rest.TemporaryRestEntity;
  * @author Mikko Hilpinen
  * @since 25.1.2015
  */
-public abstract class DatabaseEntity extends TemporaryRestEntity
+public abstract class DatabaseEntity extends TemporaryRestEntity implements DatabaseReadable, 
+		DatabaseWritable
 {
 	// ATTRIBUTES	-------------------------
 	
-	private DatabaseEntityTable table;
+	private DatabaseTable table;
 	private String id;
 	
 	
@@ -51,7 +49,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @throws HttpException If the entity couldn't be read from the database
 	 */
 	public DatabaseEntity(RestData content, String rootPath, 
-			DatabaseEntityTable table, String id) throws HttpException
+			DatabaseTable table, String id) throws HttpException
 	{
 		super(id, content, rootPath);
 		
@@ -60,13 +58,22 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		setDatabaseID(id);
 		
 		// Loads some data from the database
-		Map<String, String> data = readData();
-		initialize(data, new HashMap<String, String>());
+		try
+		{
+			if (!DatabaseAccessor.readObjectData(this, getDatabaseID()))
+				throw new NotFoundException(rootPath + "/" + id);
+		}
+		catch (DatabaseUnavailableException | SQLException e)
+		{
+			throw new InternalServerException("Couldn't read " + rootPath + "/" + id + 
+					" from the database", e);
+		}
 	}
 	
 	/**
 	 * Creates a new entity based on the given data. This data will be registered into 
-	 * the database.
+	 * the database. This constructor should be used by entities that use auto-increment 
+	 * indexed tables
 	 * @param content The content of this entity
 	 * @param parent The parent of this entity
 	 * @param table The table that contains the entity's data
@@ -77,7 +84,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @throws HttpException If the entity couldn't be initialized or written
 	 */
 	public DatabaseEntity(RestData content, RestEntity parent, 
-			DatabaseEntityTable table, Map<String, String> parameters, 
+			DatabaseTable table, Map<String, String> parameters, 
 			Map<String, String> defaultParameters) throws HttpException
 	{
 		super("unknown", content, parent);
@@ -86,10 +93,18 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		this.table = table;
 		
 		initialize(parameters, defaultParameters);
-		setDatabaseID(getAttributes().get(getTable().getIDColumnName()));
+		setDatabaseID(getAttributes().get(getTable().getPrimaryColumnName()));
 		
 		// Saves the entity into database
-		writeData();
+		try
+		{
+			DatabaseAccessor.insert(this);
+		}
+		catch (SQLException | DatabaseUnavailableException e)
+		{
+			throw new InternalServerException("Couldn't write " + getPath() + 
+					" into the database", e);
+		}
 	}
 	
 	/**
@@ -107,7 +122,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	 * @throws HttpException If the entity couldn't be initialized or written
 	 */
 	public DatabaseEntity(RestData content, RestEntity parent, 
-			DatabaseEntityTable table, String id, 
+			DatabaseTable table, String id, 
 			Map<String, String> parameters, Map<String, String> defaultParameters) 
 			throws HttpException
 	{
@@ -120,7 +135,15 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 		setDatabaseID(id);
 		
 		// Saves the entity into database
-		writeData();
+		try
+		{
+			DatabaseAccessor.insert(this);
+		}
+		catch (SQLException | DatabaseUnavailableException e)
+		{
+			throw new InternalServerException("Couldn't write " + getPath() + 
+					" into the database", e);
+		}
 	}
 	
 	
@@ -132,7 +155,7 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	{
 		try
 		{
-			DatabaseAccessor.delete(getTable(), getTable().getIDColumnName(), getDatabaseID());
+			DatabaseAccessor.delete(getTable(), getTable().getPrimaryColumnName(), getDatabaseID());
 		}
 		catch (SQLException | DatabaseUnavailableException e)
 		{
@@ -164,16 +187,32 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 			writer.writeAttribute("id", getDatabaseID());
 	}
 	
+	@Override
+	public String getColumnValue(String columnName)
+	{
+		return getAttributes().get(columnName);
+	}
+
+	@Override
+	public void newIndexGenerated(int newIndex)
+	{
+		setDatabaseID(newIndex + "");
+	}
+
+	@Override
+	public void setValue(String columnName, String readValue)
+	{
+		setAttribute(columnName, readValue);
+	}
 	
-	// GETTERS & SETTERS	------------------
-	
-	/**
-	 * @return The table that holds the data for this entity
-	 */
-	public DatabaseEntityTable getTable()
+	@Override
+	public DatabaseTable getTable()
 	{
 		return this.table;
 	}
+	
+	
+	// GETTERS & SETTERS	------------------
 	
 	/**
 	 * @return The id of this entity in the database
@@ -187,140 +226,28 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 	// OTHER METHODS	----------------------
 	
 	/**
-	 * Saves the entity's data into the database
-	 * @throws HttpException If the operation fails
+	 * Updates the object's data in the database. No new data will be inserted but previous 
+	 * data may be modified.
+	 * @throws HttpException If the operation failed
 	 */
-	protected void writeData() throws HttpException
+	protected void updateToDatabase() throws HttpException
 	{
-		// Checks if the data should be updated instead of written as new
-		if (isInDatabase())
-			updateData();
-		else
+		try
 		{
-			try
-			{
-				// Inserts the data into the database
-				if (getTable().usesAutoIncrementIndexing())
-					setDatabaseID("" + DatabaseAccessor.insert(getTable(), getColumnData(), 
-							getTable().getIDColumnName()));
-				else
-				{
-					if (!getTable().usesIndexing())
-						DatabaseAccessor.insert(getTable(), getColumnData());
-					else if (getTable().usesAutoIncrementIndexing())
-						DatabaseAccessor.insert(getTable(), getColumnData(), 
-								getTable().getIDColumnName());
-					else
-					{
-						DatabaseAccessor.insert(getTable(), getColumnData(), 
-								Integer.parseInt(getDatabaseID()));
-					}
-				}
-			}
-			catch (DatabaseUnavailableException | SQLException | InvalidTableTypeException e)
-			{
-				// TODO: How about localization?
-				throw new InternalServerException("Can't write " + getPath() + 
-						" into the database", e);
-			}
-			catch (NumberFormatException e)
-			{
-				throw new InvalidParametersException("ID " + getDatabaseID() + 
-						" can't be parsed into an integer");
-			}
+			DatabaseAccessor.update(this);
+		}
+		catch (InvalidTableTypeException | SQLException
+				| DatabaseUnavailableException e)
+		{
+			throw new InternalServerException("Couldn't update " + getPath() + 
+					" to the database", e);
 		}
 	}
 	
 	private void setDatabaseID(String newID)
 	{
 		this.id = newID;
-		setAttribute(getTable().getIDColumnName(), newID);
-	}
-	
-	private Map<String, String> readData() throws HttpException
-	{
-		Map<String, String> data;
-		DatabaseAccessor accessor = new DatabaseAccessor(getTable().getDatabaseName());
-		PreparedStatement statement = null;
-		ResultSet results = null;
-		try
-		{
-			// Parses the id, if necessary
-			int intID = 0;
-			if (getTable().usesIndexing())
-				intID = Integer.parseInt(getDatabaseID());
-			
-			statement = accessor.getPreparedStatement("SELECT * FROM " + 
-					DatabaseSettings.getTableHandler().getTableNameForIndex(getTable(), 
-					intID, false) + " WHERE " + getTable().getIDColumnName() + " = '" + 
-					getDatabaseID() + "'");
-			results = statement.executeQuery();
-			
-			// Data was found
-			if (results.next())
-			{
-				data = new HashMap<>();
-				// Goes through the columns and collects the data
-				for (String field : getTable().getColumnNames())
-				{
-					data.put(field, results.getString(field));
-				}
-			}
-			// Data wasn't found
-			else
-				throw new NotFoundException(getPath());
-		}
-		catch (NumberFormatException e)
-		{
-			throw new InvalidParametersException("ID " + getDatabaseID() + 
-					" can't be parsed into an integer");
-		}
-		catch (SQLException | DatabaseUnavailableException e)
-		{
-			throw new InternalServerException("Failed to load " + getPath(), e);
-		}
-		finally
-		{
-			DatabaseAccessor.closeResults(results);
-			DatabaseAccessor.closeStatement(statement);
-			accessor.closeConnection();
-		}
-		
-		return data;
-	}
-	
-	private void updateData() throws InternalServerException
-	{
-		try
-		{
-			String[] columnNames = 
-					getTable().getColumnNames().toArray(new String[0]);
-			String[] columnData = getColumnData().toArray(new String[0]);
-			
-			DatabaseAccessor.update(getTable(), getTable().getIDColumnName(), getDatabaseID(), 
-					columnNames, columnData);
-		}
-		catch (DatabaseUnavailableException | SQLException e)
-		{
-			throw new InternalServerException("Couldn't overwrite " + getPath() + 
-					" into the database", e);
-		}
-	}
-	
-	private boolean isInDatabase() throws InternalServerException
-	{
-		if (getDatabaseID() == null)
-			return false;
-		try
-		{
-			return !DatabaseEntityTable.findMatchingIDs(getTable(), 
-					getTable().getIDColumnName(), getDatabaseID(), 1).isEmpty();
-		}
-		catch (DatabaseUnavailableException | SQLException e)
-		{
-			throw new InternalServerException("Can't check if " + getPath() + 
-					" exists in the database", e);
-		}
+		setAttribute(getTable().getPrimaryColumnName(), newID);
 	}
 	
 	private void initialize(Map<String, String> parameters, 
@@ -335,24 +262,11 @@ public abstract class DatabaseEntity extends TemporaryRestEntity
 				setAttribute(field, parameters.get(field));
 			else if (defaultParameters.containsKey(field))
 				setAttribute(field, defaultParameters.get(field));
+			
 			// The id parameter needn't be in the parameters
-			else if (!field.equals(getTable().getIDColumnName()))
+			// TODO: Also add support for optional parameters
+			else if (!field.equals(getTable().getPrimaryColumnName()))
 				throw new InvalidParametersException("Parameter " + field + " not provided");
 		}
-	}
-	
-	private List<String> getColumnData()
-	{
-		List<String> columnData = new ArrayList<>();
-		Map<String, String> attributes = getAttributes();
-		for (String columnName : getTable().getColumnNames())
-		{
-			if (columnName.equals(getTable().getIDColumnName()))
-				columnData.add(getDatabaseID());
-			else
-				columnData.add(attributes.get(columnName));
-		}
-		
-		return columnData;
 	}
 }

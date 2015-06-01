@@ -88,7 +88,7 @@ public class LoginManagerEntity extends DatabaseTableEntity
 		// Checks that the provided password (or a key) is correct
 		try
 		{
-			LoginKey.checkKey(this.keyTable, pathPart, parameters);
+			LoginKeyTable.checkKey(this.keyTable, pathPart, parameters);
 		}
 		catch (HttpException e)
 		{

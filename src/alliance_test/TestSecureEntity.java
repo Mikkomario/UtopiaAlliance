@@ -3,7 +3,7 @@ package alliance_test;
 import java.util.Map;
 
 import nexus_http.HttpException;
-import alliance_authorization.LoginKey;
+import alliance_authorization.LoginKeyTable;
 import alliance_authorization.SecureEntity;
 import alliance_rest.DatabaseEntity;
 
@@ -49,6 +49,6 @@ public class TestSecureEntity extends SecureEntity
 	protected void authorizeModification(Map<String, String> parameters)
 			throws HttpException
 	{
-		LoginKey.checkKey(TestLoginKeyTable.DEFAULT, getDatabaseID(), parameters);
+		LoginKeyTable.checkKey(TestLoginKeyTable.DEFAULT, getDatabaseID(), parameters);
 	}
 }

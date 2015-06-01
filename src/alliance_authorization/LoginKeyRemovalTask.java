@@ -51,7 +51,7 @@ public class LoginKeyRemovalTask extends MaintenanceTask
 		{
 			// Finds all the login keys
 			List<String> loginKeyIDs = DatabaseAccessor.findMatchingData(this.keyTable, 
-					new String[0], new String[0], this.keyTable.getIDColumnName());
+					new String[0], new String[0], this.keyTable.getPrimaryColumnName());
 			
 			// Removes any old ones
 			for (String id : loginKeyIDs)

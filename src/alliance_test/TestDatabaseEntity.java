@@ -4,12 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import nexus_http.HttpException;
-import nexus_http.InternalServerException;
 import nexus_http.InvalidParametersException;
 import nexus_http.NotFoundException;
 import nexus_rest.RestEntity;
 import nexus_rest.SimpleRestData;
-import alliance_authorization.LoginKey;
+import alliance_authorization.LoginKeyTable;
 import alliance_rest.DatabaseEntity;
 
 /**
@@ -54,13 +53,13 @@ public class TestDatabaseEntity extends DatabaseEntity
 	@Override
 	public void Put(Map<String, String> parameters) throws HttpException
 	{
-		LoginKey.checkKey(TestLoginKeyTable.DEFAULT, getDatabaseID(), parameters);
+		LoginKeyTable.checkKey(TestLoginKeyTable.DEFAULT, getDatabaseID(), parameters);
 		
 		// Checks the parameters but allows update
 		defaultPut(checkParameters(parameters));
 		
 		// Also saves the changes
-		writeData();
+		updateToDatabase();
 	}
 	
 	@Override
@@ -134,7 +133,7 @@ public class TestDatabaseEntity extends DatabaseEntity
 		return parameters;
 	}
 	
-	private RestEntity getFriend() throws HttpException
+	private TestDatabaseEntity getFriend() throws HttpException
 	{
 		if (!getAttributes().get("friendID").equals("-1"))
 		{
@@ -148,11 +147,7 @@ public class TestDatabaseEntity extends DatabaseEntity
 				// TODO: The change takes places after the data has been written, which is 
 				// a bit problematic
 				setAttribute("friendID", "-1");
-				writeData();
-			}
-			catch (HttpException e)
-			{
-				throw new InternalServerException("Couldn't find the linked entity", e);
+				updateToDatabase();
 			}
 		}
 		
